@@ -51,3 +51,25 @@ export const recoverPassword = async (req: Request, recoveryToken: string, res: 
     throw new Error('Error al enviar el correo');
   }
 };
+
+export const registerFingerprint = async (req: Request, res: Response) => {
+    const { fingerprint } = req.body; // La huella enviada desde el frontend
+    const userId = req.user?.id; // ID del usuario autenticado (agregado por el middleware)
+
+    try {
+        // Busca al usuario por su ID
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado.' });
+        }
+
+        // Actualiza la huella del usuario
+        user.fingerprint = fingerprint;
+        await user.save();
+
+        res.status(200).json({ message: 'Huella registrada con éxito.' });
+    } catch (error) {
+        console.error('Error al registrar la huella:', error);
+        res.status(500).json({ message: 'Error al registrar la huella.' });
+    }
+};

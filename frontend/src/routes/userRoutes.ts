@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import User from '../models/User';
-import { recoverPassword } from '../controllers/userController';
+import { recoverPassword, registerFingerprint } from '../controllers/userController';
 import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
 import mongoose from 'mongoose';
@@ -297,5 +297,8 @@ router.get("/questions", async (req, res) => {
     res.status(500).json({ message: "Error al obtener las preguntas secretas" });
   }
 });
+
+// Ruta para registrar la huella del usuario
+router.post('/register-fingerprint', authMiddleware, registerFingerprint);
 
 export default router;

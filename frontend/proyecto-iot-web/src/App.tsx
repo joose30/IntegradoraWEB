@@ -27,6 +27,7 @@ import PantallaRecuperarConPregunta from "./componentes/PantallaRecuperarConPreg
 import { CartProvider } from "./context/CartContext";
 import CartScreen from "./componentes/CartScreen";
 import CheckoutScreen from "./componentes/CheckoutScreen";
+import PantallaHuella from "./componentes/PantallaHuella"; // Importa la pantalla de registro de huellas
 
 const App: React.FC = () => {
   const location = useLocation();
@@ -95,6 +96,7 @@ const App: React.FC = () => {
           <Route path="/producto/:id" element={<PantallaProductoDetail />} />
           <Route path="/carrito" element={<CartScreen />} />
           <Route path="/checkout" element={<CheckoutScreen />} />
+          <Route path="/register-fingerprint" element={isAuthenticated ? <PantallaHuella /> : <Navigate to="/login" />} />
         </Routes>
       </div>
       

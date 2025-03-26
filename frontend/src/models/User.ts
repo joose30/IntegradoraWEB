@@ -12,6 +12,7 @@ export interface IUser extends Document {
   recoveryToken: string | null; // Permitir que sea string o null
   secretQuestion: string; // Nueva propiedad
   secretAnswer: string;   // Nueva propiedad
+  fingerprint: string | null; // Nueva propiedad para la huella
 }
 
 const userSchema = new mongoose.Schema<IUser>({
@@ -23,8 +24,9 @@ const userSchema = new mongoose.Schema<IUser>({
   password: { type: String, required: true },
   role: { type: String, default: 'user' },
   recoveryToken: { type: String, default: null },
-  secretQuestion: { type: String, required: true }, // Nueva propiedad
-  secretAnswer: { type: String, required: true },   // Nueva propiedad
+  secretQuestion: { type: String, required: true },
+  secretAnswer: { type: String, required: true },
+  fingerprint: { type: String, default: null }, // Nuevo campo para la huella
 });
 
 const User = mongoose.model<IUser>('User', userSchema);
