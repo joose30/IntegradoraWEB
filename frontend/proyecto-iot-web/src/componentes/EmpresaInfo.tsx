@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom'; // Importa Link
 import '../css/EmpresaInfo.css';
 
 interface Mision {
@@ -98,12 +99,11 @@ const EmpresaInfo: React.FC = () => {
       </section>
 
       <section>
-        <h2 onClick={() => toggleSection('politica')} className="accordion-title">
-          Políticas
+        <h2 className="accordion-title">
+          <Link to="/politicas" style={{ textDecoration: 'none', color: 'inherit' }}>
+            Políticas
+          </Link>
         </h2>
-        {activeSection === 'politica' && (
-          <p className="accordion-content">{politica ? politica.descripcion : 'No hay políticas disponibles'}</p>
-        )}
       </section>
     </div>
   );
