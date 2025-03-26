@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom'; // Importa Link
 import '../css/EmpresaInfo.css';
 
 interface Mision {
@@ -23,7 +22,7 @@ interface Politica {
   descripcion: string;
 }
 
-const EmpresaPublica: React.FC = () => {
+const EmpresaInfo: React.FC = () => {
   const [mision, setMision] = useState<Mision | null>(null);
   const [vision, setVision] = useState<Vision | null>(null);
   const [valor, setValor] = useState<Valor | null>(null);
@@ -31,7 +30,7 @@ const EmpresaPublica: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<string | null>(null); // Controla qué sección está abierta
 
   useEffect(() => {
     const fetchData = async () => {
@@ -64,7 +63,7 @@ const EmpresaPublica: React.FC = () => {
   if (error) return <p>{error}</p>;
 
   const toggleSection = (section: string) => {
-    setActiveSection(activeSection === section ? null : section);
+    setActiveSection(activeSection === section ? null : section); // Alterna entre abrir y cerrar
   };
 
   return (
@@ -99,14 +98,15 @@ const EmpresaPublica: React.FC = () => {
       </section>
 
       <section>
-        <h2 className="accordion-title">
-          <Link to="/politicas" style={{ textDecoration: 'none', color: 'inherit' }}>
-            Políticas
-          </Link>
+        <h2 onClick={() => toggleSection('politica')} className="accordion-title">
+          Políticas
         </h2>
+        {activeSection === 'politica' && (
+          <p className="accordion-content">{politica ? politica.descripcion : 'No hay políticas disponibles'}</p>
+        )}
       </section>
     </div>
   );
 };
 
-export default EmpresaPublica;
+export default EmpresaInfo;
