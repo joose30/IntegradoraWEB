@@ -8,7 +8,7 @@ const RegistrarHuella: React.FC = () => {
     const handleRegister = async () => {
         try {
             const token = localStorage.getItem('token'); // Obtén el token del usuario
-            const response = await axios.post(
+            const response = await axios.post<{ message: string }>(
                 'http://localhost:8082/api/users/register-fingerprint',
                 { fingerprint },
                 {

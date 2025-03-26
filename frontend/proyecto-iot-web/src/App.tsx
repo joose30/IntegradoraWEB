@@ -16,7 +16,7 @@ import PantallaCatalogoProductosPublica from "./componentes/PantallaCatalogoProd
 import PantallaPuerta from "./componentes/PantallaPuerta";
 import PantallaRfidControl from "./componentes/PantallaRfidControl";
 import EmpresaInfo from "./componentes/EmpresaInfo";
-import EmpresaInfoPublica from "./componentes/EmpresaPublica";
+import EmpresaInfoPublica from "./componentes/EmpresaInfoPublica";
 import PantallaRecuperarContraseña from "./componentes/PantallaRecuperarContraseña";
 import PantallaRestablecerContraseña from "./componentes/PantallaRestablecerContraseña";
 import PantallaProductoDetail from "./componentes/PantallaProductoDetail";
@@ -28,6 +28,7 @@ import { CartProvider } from "./context/CartContext";
 import CartScreen from "./componentes/CartScreen";
 import CheckoutScreen from "./componentes/CheckoutScreen";
 import PantallaHuella from "./componentes/PantallaHuella"; // Importa la pantalla de registro de huellas
+import PantallaPoliticasPage from "./componentes/PoliticasPage"; // Importa la pantalla de políticas
 
 const App: React.FC = () => {
   const location = useLocation();
@@ -42,7 +43,8 @@ const App: React.FC = () => {
     '/reset-password/:token',
     '/empresaPublico',
     '/productosPublico',
-    '/productoDetailPublico'
+    '/productoDetailPublico',
+    'politicas',
   ];
 
   const isPublicRoute = publicRoutes.some(route => {
@@ -73,7 +75,8 @@ const App: React.FC = () => {
           <Route path="/productoDetailPublico" element={<PantallaProductoDetailPublica />} />
           <Route path="/recuperar-contraseña" element={<PantallaRecuperarContraseña />} /> {/* Ruta para Recuperar Contraseña */}
           <Route path="/recuperar-con-pregunta" element={<PantallaRecuperarConPregunta />} /> {/* Ruta para Recuperar con Pregunta */}
-          
+          <Route path="/politicas" element={<PantallaPoliticasPage />} /> {/* Ruta para las políticas */}
+
           {/* ========== RUTAS PRIVADAS ========== */}
           <Route path="/home" element={isAuthenticated ? <PantallaInicio /> : <Navigate to="/login" />} />
           

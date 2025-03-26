@@ -23,7 +23,7 @@ interface Politica {
   descripcion: string;
 }
 
-const EmpresaInfo: React.FC = () => {
+const EmpresaPublica: React.FC = () => {
   const [mision, setMision] = useState<Mision | null>(null);
   const [vision, setVision] = useState<Vision | null>(null);
   const [valor, setValor] = useState<Valor | null>(null);
@@ -31,7 +31,7 @@ const EmpresaInfo: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [activeSection, setActiveSection] = useState<string | null>(null); // Controla qué sección está abierta
+  const [activeSection, setActiveSection] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -64,7 +64,7 @@ const EmpresaInfo: React.FC = () => {
   if (error) return <p>{error}</p>;
 
   const toggleSection = (section: string) => {
-    setActiveSection(activeSection === section ? null : section); // Alterna entre abrir y cerrar
+    setActiveSection(activeSection === section ? null : section);
   };
 
   return (
@@ -109,4 +109,4 @@ const EmpresaInfo: React.FC = () => {
   );
 };
 
-export default EmpresaInfo;
+export default EmpresaPublica;
