@@ -75,19 +75,15 @@ router.get('/valors', async (req, res) => {
   }
 });
 
-// Ruta para obtener la última política
+// Ruta para obtener todas las políticas (AHORA)
 router.get('/politicas', async (req, res) => {
   try {
-    const politicas = await Politica.find().sort({ _id: -1 }).limit(1).lean();
-    if (politicas.length > 0) {
-      const formattedPolitica = {
-        id: politicas[0]._id,
-        descripcion: politicas[0].descripcion,
-      };
-      res.json(formattedPolitica); // Devuelve un objeto
-    } else {
-      res.json(null); // Devuelve null si no hay datos
-    }
+    const politicas = await Politica.find().lean();
+    const formattedPoliticas = politicas.map(politica => ({
+      id: politica._id,
+      descripcion: politica.descripcion
+    }));
+    res.json(formattedPoliticas);
   } catch (err) {
     res.status(500).json({ message: 'Error al obtener las políticas' });
   }
