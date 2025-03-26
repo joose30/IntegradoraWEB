@@ -23,7 +23,7 @@ interface Politica {
   descripcion: string;
 }
 
-const EmpresaPublica: React.FC = () => {
+const EmpresaInfoPublica: React.FC = () => {
   const [mision, setMision] = useState<Mision | null>(null);
   const [vision, setVision] = useState<Vision | null>(null);
   const [valor, setValor] = useState<Valor | null>(null);
@@ -109,4 +109,4 @@ const EmpresaPublica: React.FC = () => {
   );
 };
 
-export default EmpresaPublica;
+export default EmpresaInfoPublica;

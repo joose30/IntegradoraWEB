@@ -44,7 +44,7 @@ const App: React.FC = () => {
     '/empresaPublico',
     '/productosPublico',
     '/productoDetailPublico',
-    'politicas',
+    '/politicas',
   ];
 
   const isPublicRoute = publicRoutes.some(route => {
