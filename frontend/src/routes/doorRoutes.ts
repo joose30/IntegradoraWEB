@@ -1,34 +1,26 @@
+// frontend/src/routes/doorRoutes.ts
 import express from 'express';
-import axios from 'axios';
+import {
+  registerDoorStatus,
+  getLastDoorStatus,
+  handleStatusChange
+} from '../controllers/doorController';
 
 const router = express.Router();
 
-const ESP32_IP = 'http://192.168.8.2'; // Cambia la IP de tu ESP32
+// Registrar estado de la puerta
+router.post('/status', registerDoorStatus);
 
-// Ruta para abrir la puerta
-router.get('/abrir', async (req, res) => {
-  try {
-    console.log("Intentando abrir la puerta...");
-    // Realiza una solicitud al ESP32 con la acción "abrir"
-    const response = await axios.get(`${ESP32_IP}/controlPuerta?action=abrir`);
-    res.send(response.data); // Responde con el mensaje de la ESP32
-  } catch (error) {
-    console.error("Error al abrir la puerta:", error);
-    res.status(500).send('Error al abrir la puerta');
-  }
+// Obtener último estado de la puerta
+router.get('/status/:deviceId', getLastDoorStatus);
+
+// Endpoint para el Arduino
+router.post('/status-change', handleStatusChange);
+
+// Endpoint para verificar estado desde el Arduino
+router.get('/arduino-status', (req, res) => {
+  res.status(200).json({ status: 'ok' });
 });
 
-// Ruta para cerrar la puerta
-router.get('/cerrar', async (req, res) => {
-  try {
-    console.log("Intentando cerrar la puerta...");
-    // Realiza una solicitud al ESP32 con la acción "cerrar"
-    const response = await axios.get(`${ESP32_IP}/controlPuerta?action=cerrar`);
-    res.send(response.data); // Responde con el mensaje de la ESP32
-  } catch (error) {
-    console.error("Error al cerrar la puerta:", error);
-    res.status(500).send('Error al cerrar la puerta');
-  }
-});
-
+// Añade esta línea al final
 export default router;
