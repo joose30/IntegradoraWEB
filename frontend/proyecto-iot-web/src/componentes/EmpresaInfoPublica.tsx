@@ -100,7 +100,7 @@ const EmpresaInfoPublica: React.FC = () => {
 
       <section>
         <h2 className="accordion-title">
-          <Link to="/politicas" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <Link to="/politicasPublico" style={{ textDecoration: 'none', color: 'inherit' }}>
             Políticas
           </Link>
         </h2>

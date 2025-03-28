@@ -62,21 +62,20 @@ const Header: React.FC = () => {
                 <Link to="/dispositivo" style={styles.navLink}>Dispositivo IoT</Link>
               </li>
               <li style={styles.navItem}>
-                <Link to="/rfid" style={styles.navLink}>RFID</Link>
-              </li>
-              <li style={styles.navItem}>
                 <Link to="/perfil" style={styles.navLink}>Perfil</Link>
               </li>
+              <li style={styles.navItem}>
+                <Link to="/registrar-huella" style={styles.navLink}>Registrar Huella</Link>
+              </li>
+              <Link to="/carrito" style={styles.cartLink}>
+                Carrito ({cart.length})
+              </Link>
             </>
           )}
           {/* Enlace para registrar huella */}
-          <li style={styles.navItem}>
-            <Link to="/registrar-huella" style={styles.navLink}>Registrar Huella</Link>
-          </li>
+       
         </ul>
-        <Link to="/carrito" style={styles.cartLink}>
-          Carrito ({cart.length})
-        </Link>
+       
       </nav>
       <div style={styles.rightSection}>
         {userName && <p style={styles.welcome}>Bienvenido, {userName}</p>}
