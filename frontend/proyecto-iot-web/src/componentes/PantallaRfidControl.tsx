@@ -7,6 +7,7 @@ export default function RFIDControlScreen() {
   const [accessGranted, setAccessGranted] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [client, setClient] = useState<mqtt.MqttClient | null>(null);
+  const [isReading, setIsReading] = useState(false);
   const navigate = useNavigate();
 
   const MQTT_CONFIG = {
@@ -32,11 +33,12 @@ export default function RFIDControlScreen() {
     });
 
     mqttClient.on('message', (topic, message) => {
-      if (topic === MQTT_CONFIG.topics.rfid) {
+      if (topic === MQTT_CONFIG.topics.rfid && isReading) {
         const rfid = message.toString().trim();
         console.log('RFID recibido:', rfid);
         setRfidUID(rfid);
-        setAccessGranted(true); // Cambia según tu lógica de validación
+        setAccessGranted(true);
+        setIsReading(false);
       }
     });
 
@@ -49,7 +51,7 @@ export default function RFIDControlScreen() {
     return () => {
       if (mqttClient.connected) mqttClient.end();
     };
-  }, []);
+  }, [isReading]);
 
   const handleScanRFID = () => {
     if (!client) {
@@ -57,14 +59,8 @@ export default function RFIDControlScreen() {
       return;
     }
 
-    client.publish(MQTT_CONFIG.topics.rfid, 'leer', { qos: 1 }, (err) => {
-      if (err) {
-        console.error('Error al enviar comando:', err);
-        alert('Error al enviar comando al servidor.');
-      } else {
-        console.log('Comando enviado para leer RFID');
-      }
-    });
+    setIsReading(true);
+    console.log('Esperando datos de RFID...');
   };
 
   const handleReturn = () => {
