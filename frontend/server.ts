@@ -1,16 +1,16 @@
-// IntegradoraWEB/frontend/server.ts <- Ruta
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import connectDB from './config/db'; // Importando la conexión a la base de datos
-import doorRoutes from './src/routes/doorRoutes';  // Rutas para el control de la puerta
-import userRoutes from './src/routes/userRoutes'; // Importa las rutas de usuarios
+import connectDB from './config/db';
+import doorRoutes from './src/routes/doorRoutes';
+import userRoutes from './src/routes/userRoutes';
 import empresaRoutes from './src/routes/empresaRoutes';
-import productRoutes from './src/routes/productRoutes'; // Importa las rutas de productos
-import preguntasFrecuentesRoutes from './src/routes/preguntasFrecuentesRoutes'; // Importa las rutas de preguntas frecuentes
-import purchaseRoutes from './src/routes/purchaseRoutes'; // Importa las rutas de compras
+import productRoutes from './src/routes/productRoutes';
+import preguntasFrecuentesRoutes from './src/routes/preguntasFrecuentesRoutes';
+import purchaseRoutes from './src/routes/purchaseRoutes';
+import registroRoutes from './src/routes/registroRoutes'; // Asegúrate de importar las rutas de registros
 
-dotenv.config(); // Cargando las variables de entorno desde .env
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8082;
@@ -30,14 +30,30 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Rutas
-app.use('/api/door', doorRoutes);  // Rutas para el control de la puerta
-app.use('/api/users', userRoutes); // Registra las rutas de usuarios
-app.use('/api/empresa', empresaRoutes); // Rutas de empresa
-app.use('/api/products', productRoutes); // Rutas de productos
-app.use('/api/preguntasFrecuentes', preguntasFrecuentesRoutes); // Rutas de preguntas frecuentes
-app.use('/api/purchase', purchaseRoutes); // Rutas de compras
+app.use('/api/door', doorRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/empresa', empresaRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/preguntasFrecuentes', preguntasFrecuentesRoutes);
+app.use('/api/purchase', purchaseRoutes);
+app.use('/api/registros', registroRoutes); // Esta línea es la que faltaba
+
+// Ruta de prueba
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK',
+    routes: {
+      registros: '/api/registros',
+      registrosUltimos: '/api/registros/ultimos'
+    }
+  });
+});
 
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log('Rutas de registros disponibles:');
+  console.log('GET /api/registros');
+  console.log('GET /api/registros/ultimos');
+  console.log('GET /api/registros/get');
 });
