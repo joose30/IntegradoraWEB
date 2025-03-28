@@ -25,6 +25,120 @@ interface FingerprintRegistrationModalProps {
   userName: string;
 }
 
+const styles = {
+  modal: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: '12px',
+    padding: '25px',
+    width: '450px',
+    maxWidth: '90%',
+    boxShadow: '0 5px 15px rgba(0, 0, 0, 0.2)',
+    fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
+    margin: '20px auto',
+    border: '1px solid #e0e0e0'
+  },
+  title: {
+    color: '#2c3e50',
+    textAlign: 'center' as const,
+    marginBottom: '20px',
+    fontSize: '24px',
+    fontWeight: '600'
+  },
+  content: {
+    margin: '20px 0',
+    textAlign: 'center' as const,
+    minHeight: '100px',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    justifyContent: 'center'
+  },
+  instructionText: {
+    fontSize: '16px',
+    color: '#34495e',
+    marginBottom: '20px'
+  },
+  loader: {
+    margin: '15px auto',
+    padding: '10px',
+    color: '#3498db',
+    fontSize: '14px'
+  },
+  message: {
+    padding: '12px',
+    borderRadius: '6px',
+    margin: '15px 0',
+    fontSize: '14px',
+    textAlign: 'center' as const
+  },
+  error: {
+    backgroundColor: '#fdecea',
+    color: '#d32f2f',
+    border: '1px solid #ef9a9a'
+  },
+  success: {
+    backgroundColor: '#e8f5e9',
+    color: '#2e7d32',
+    border: '1px solid #a5d6a7'
+  },
+  info: {
+    backgroundColor: '#e3f2fd',
+    color: '#1565c0',
+    border: '1px solid #90caf9'
+  },
+  buttonContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '15px',
+    marginTop: '20px'
+  },
+  button: {
+    padding: '10px 20px',
+    borderRadius: '6px',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    transition: 'all 0.3s ease',
+    minWidth: '120px'
+  },
+  primaryButton: {
+    backgroundColor: '#3498db',
+    color: 'white',
+    '&:hover': {
+      backgroundColor: '#2980b9'
+    },
+    '&:disabled': {
+      backgroundColor: '#bdc3c7',
+      cursor: 'not-allowed'
+    }
+  },
+  cancelButton: {
+    backgroundColor: '#e74c3c',
+    color: 'white',
+    '&:hover': {
+      backgroundColor: '#c0392b'
+    }
+  },
+  progressIndicator: {
+    display: 'flex',
+    justifyContent: 'center',
+    margin: '15px 0'
+  },
+  stepDot: {
+    width: '12px',
+    height: '12px',
+    borderRadius: '50%',
+    margin: '0 5px',
+    backgroundColor: '#bdc3c7'
+  },
+  activeStepDot: {
+    backgroundColor: '#3498db'
+  },
+  completedStepDot: {
+    backgroundColor: '#2ecc71'
+  }
+};
+
 const FingerprintRegistrationModal: React.FC<FingerprintRegistrationModalProps> = ({
   onCaptureComplete,
   onCancel,
@@ -177,45 +291,72 @@ const FingerprintRegistrationModal: React.FC<FingerprintRegistrationModalProps> 
   };
 
   return (
-    <div className="fingerprint-modal">
-      <h2>Registro de Huella Digital</h2>
+    <div style={styles.modal}>
+      <h2 style={styles.title}>Registro de Huella Digital</h2>
 
-      <div className="content">
-        <p>
+      <div style={styles.content}>
+        <p style={styles.instructionText}>
           {isRegistering
             ? getStepInstruction(registrationStep)
             : 'Presione el botón para iniciar el registro de huella'}
         </p>
 
-        {status === 'registering' && <div className="loader">Cargando...</div>}
+        {isRegistering && (
+          <div style={styles.progressIndicator}>
+            {[1, 2, 3].map((step) => (
+              <div
+                key={step}
+                style={{
+                  ...styles.stepDot,
+                  ...(registrationStep > step ? styles.completedStepDot : {}),
+                  ...(registrationStep === step ? styles.activeStepDot : {})
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        {status === 'registering' && <div style={styles.loader}>Cargando...</div>}
 
         {message && (
           <div
-            className={`message ${
-              status === 'error' ? 'error' : status === 'success' ? 'success' : 'info'
-            }`}
+            style={{
+              ...styles.message,
+              ...(status === 'error' ? styles.error : 
+                  status === 'success' ? styles.success : styles.info)
+            }}
           >
             {message}
           </div>
         )}
       </div>
 
-      <div className="button-container">
+      <div style={styles.buttonContainer}>
         {!isRegistering ? (
           <>
             <button
-              className={`button primary ${!isConnected ? 'disabled' : ''}`}
+              style={{
+                ...styles.button,
+                ...styles.primaryButton,
+                ...(!isConnected ? { opacity: 0.6, cursor: 'not-allowed' } : {})
+              }}
               onClick={startFingerprintRegistration}
               disabled={!isConnected}
             >
               Registrar Huella
             </button>
-            <button className="button cancel" onClick={handleCancel}>
+            <button 
+              style={{ ...styles.button, ...styles.cancelButton }} 
+              onClick={handleCancel}
+            >
               Cancelar
             </button>
           </>
         ) : (
-          <button className="button cancel" onClick={handleCancel}>
+          <button 
+            style={{ ...styles.button, ...styles.cancelButton }} 
+            onClick={handleCancel}
+          >
             Cancelar Registro
           </button>
         )}
