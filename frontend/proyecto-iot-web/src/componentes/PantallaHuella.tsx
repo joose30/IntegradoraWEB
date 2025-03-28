@@ -8,7 +8,7 @@ const PantallaHuella: React.FC = () => {
   const handleRegistrarHuella = async () => {
     try {
       setLoading(true); // Mostrar animación de carga
-      const response = await axios.get('http://192.168.8.4:8082/api/huella/registrar'); // Cambia la IP según tu configuración
+      const response = await axios.get('http://localhost:8082/api/huella/registrar'); // Cambia la IP según tu configuración
       setMessage(response.data); // Mostrar el mensaje recibido del backend
     } catch (error) {
       console.error('Error al registrar huella:', error);

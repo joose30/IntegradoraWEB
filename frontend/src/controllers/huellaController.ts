@@ -11,9 +11,10 @@ export const registrarHuella = async (req: Request, res: Response) => {
         if (response.status === 200) {
             return res.status(200).json({ message: "Huella registrada con éxito" });
         } else {
-            return res.status(500).json({ error: "Error en Arduino" });
+            return res.status(500).json({ error: `Error en Arduino: ${response.statusText}` });
         }
-    } catch (error) {
-        return res.status(500).json({ error: "Error de conexión con Arduino" });
+    } catch (error: any) {
+        console.error("Error al conectar con Arduino:", error.message);
+        return res.status(500).json({ error: "Error de conexión con Arduino", details: error.message });
     }
 };

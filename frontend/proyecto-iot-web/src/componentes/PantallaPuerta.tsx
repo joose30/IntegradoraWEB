@@ -226,7 +226,7 @@ const fetchRegistros = async () => {
               rfidStatus: `Tarjeta detectada: ${rfid}`,
               lastRFID: rfid
             });
-            showNotification(`Tarjeta RFID detectada`, 'info');
+            
             break;
             
           case MQTT_CONFIG.topics.pir:
@@ -284,9 +284,7 @@ const fetchRegistros = async () => {
               pinStatus: msg ? 'PIN ingresado: ****' : 'No ingresado',
               lastPinAttempt: msg
             });
-            if (msg) {
-              showNotification('PIN ingresado correctamente', 'info', 2000);
-            }
+            
             break;
             
           case MQTT_CONFIG.topics.system:
@@ -517,7 +515,18 @@ const fetchRegistros = async () => {
       
       <div style={styles.card}>
         <h2 style={{ marginBottom: '20px', color: '#333' }}>Control de Puerta IoT</h2>
-        
+
+        {/* Botón de Abrir Puerta */}
+        <div style={styles.buttonGroup}>
+          <button
+            onClick={() => handleDoorAction('abrir')}
+            disabled={systemState.doorStatus === 'Abierta' || systemState.loading}
+            style={systemState.doorStatus === 'Abierta' ? styles.disabledButton : styles.button}
+          >
+            {systemState.loading ? 'Enviando...' : 'Abrir Puerta'}
+          </button>
+        </div>
+
         {/* Sección de Estado General */}
         <div style={styles.statusSection}>
           <h3 style={styles.sectionTitle}>Estado del Sistema</h3>
@@ -532,7 +541,7 @@ const fetchRegistros = async () => {
           {timeLeft !== null && systemState.doorStatus === 'Abierta' && (
             <div style={styles.statusItem}>
               <span style={styles.statusLabel}>Cierre automático en:</span>
-              <span style={{...styles.statusValue, ...styles.timeLeft}}>{timeLeft}s</span>
+              <span style={{ ...styles.statusValue, ...styles.timeLeft }}>{timeLeft}s</span>
             </div>
           )}
         </div>
@@ -625,24 +634,6 @@ const fetchRegistros = async () => {
               </div>
             ))
           )}
-        </div>
-
-        {/* Controles */}
-        <div style={styles.buttonGroup}>
-          <button
-            onClick={() => handleDoorAction('abrir')}
-            disabled={systemState.doorStatus === 'Abierta' || systemState.loading}
-            style={systemState.doorStatus === 'Abierta' ? styles.disabledButton : styles.button}
-          >
-            {systemState.loading ? 'Enviando...' : 'Abrir Puerta'}
-          </button>
-          <button
-            onClick={() => handleDoorAction('cerrar')}
-            disabled={systemState.doorStatus === 'Cerrada' || systemState.loading}
-            style={systemState.doorStatus === 'Cerrada' ? styles.disabledButton : styles.closeButton}
-          >
-            {systemState.loading ? 'Enviando...' : 'Cerrar Puerta'}
-          </button>
         </div>
 
         {/* Última actualización */}
