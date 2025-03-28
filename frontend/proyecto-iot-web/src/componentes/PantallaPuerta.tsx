@@ -520,8 +520,8 @@ const fetchRegistros = async () => {
         <div style={styles.buttonGroup}>
           <button
             onClick={() => handleDoorAction('abrir')}
-            disabled={systemState.doorStatus === 'Abierta' || systemState.loading}
-            style={systemState.doorStatus === 'Abierta' ? styles.disabledButton : styles.button}
+            disabled={systemState.loading} // Solo se deshabilita si está cargando
+            style={systemState.loading ? styles.disabledButton : styles.button}
           >
             {systemState.loading ? 'Enviando...' : 'Abrir Puerta'}
           </button>

@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Header from "./componentes/Header";
 import HeaderPublico from "./componentes/HeaderPublico";
 import Foother from "./componentes/Foother";
@@ -29,10 +29,24 @@ import CartScreen from "./componentes/CartScreen";
 import CheckoutScreen from "./componentes/CheckoutScreen";
 import PantallaHuella from "./componentes/PantallaHuella";
 import PantallaPoliticasPage from "./componentes/PoliticasPage";
+import FingerprintRegistrationModal from "./componentes/FingerprintRegistrationModal";
 
 const App: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const isAuthenticated = !!localStorage.getItem('token'); // Verifica si el usuario está autenticado
+
+  const handleCaptureComplete = (accessId: string) => {
+    console.log('Huella registrada con ID:', accessId);
+    alert(`Huella registrada con éxito. ID: ${accessId}`);
+    navigate('/home'); // Redirigir al usuario
+  };
+
+  const handleCancel = () => {
+    console.log('Registro de huella cancelado');
+    alert('Registro de huella cancelado.');
+    navigate('/home'); // Redirigir al usuario
+  };
 
   // Rutas que deben mostrar header/footer públicos
   const publicRoutes = [
@@ -45,6 +59,7 @@ const App: React.FC = () => {
     '/productosPublico',
     '/productoDetailPublico',
     '/politicasPublico', // Ruta pública para políticas
+
   ];
 
   // Determinar si la ruta actual es pública
@@ -75,6 +90,13 @@ const App: React.FC = () => {
           <Route path="/recuperar-contraseña" element={<PantallaRecuperarContraseña />} />
           <Route path="/recuperar-con-pregunta" element={<PantallaRecuperarConPregunta />} />
           <Route path="/politicasPublico" element={<PantallaPoliticasPage />} />
+          <Route path="/registrar-huella" element={
+            <FingerprintRegistrationModal
+              onCaptureComplete={handleCaptureComplete}
+              onCancel={handleCancel}
+              userName="Usuario"
+            />
+          } />
 
           {/* ========== RUTAS PRIVADAS ========== */}
           <Route path="/home" element={isAuthenticated ? <PantallaInicio /> : <Navigate to="/login" />} />
@@ -91,9 +113,7 @@ const App: React.FC = () => {
           <Route path="/perfil" element={isAuthenticated ? <PantallaPerfilUsuario /> : <Navigate to="/login" />} />
           <Route path="/producto/:id" element={<PantallaProductoDetail />} />
           <Route path="/carrito" element={<CartScreen />} />
-          <Route path="/checkout" element={<CheckoutScreen />} />
-          <Route path="/register-fingerprint" element={isAuthenticated ? <PantallaHuella /> : <Navigate to="/login" />} />
-          <Route path="/politicas" element={isAuthenticated ? <PantallaPoliticasPage /> : <Navigate to="/politicasPublico" />} />
+          <Route path="/checkout" element={<CheckoutScreen />} />          <Route path="/politicas" element={isAuthenticated ? <PantallaPoliticasPage /> : <Navigate to="/politicasPublico" />} />
         </Routes>
       </div>
       

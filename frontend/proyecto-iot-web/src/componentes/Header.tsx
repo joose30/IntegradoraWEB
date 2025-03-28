@@ -71,7 +71,7 @@ const Header: React.FC = () => {
           )}
           {/* Enlace para registrar huella */}
           <li style={styles.navItem}>
-            <Link to="/register-fingerprint" style={styles.navLink}>Registrar Huella</Link>
+            <Link to="/registrar-huella" style={styles.navLink}>Registrar Huella</Link>
           </li>
         </ul>
         <Link to="/carrito" style={styles.cartLink}>

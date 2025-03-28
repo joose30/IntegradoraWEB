@@ -299,6 +299,6 @@ router.get("/questions", async (req, res) => {
 });
 
 // Ruta para registrar la huella del usuario
-router.post('/register-fingerprint', authMiddleware, registerFingerprint);
+router.post('/registrar-huella', authMiddleware, registerFingerprint);
 
 export default router;
