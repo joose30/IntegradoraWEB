@@ -2,14 +2,205 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import mqtt from 'mqtt';
 import axios from 'axios';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
 interface Registro {
   _id: string;
   mensaje: string;
   descripcion: string;
   fecha: string;
-  tipo: string; // Added 'tipo' property
+  tipo: string;
 }
+
+// Componentes Widget internos
+const SystemStatusWidget: React.FC<{
+  connectionStatus: string;
+  doorStatus: string;
+  styles: any;
+}> = ({ connectionStatus, doorStatus, styles }) => (
+  <div style={{ ...styles.widget, backgroundColor: '#e3f2fd' }}>
+    <h3 style={{ ...styles.widgetTitle, color: '#1e88e5' }}>
+      <FontAwesomeIcon icon={faEye} style={{ ...styles.icon, color: '#1e88e5' }} />
+      Estado del Sistema
+    </h3>
+    <div style={styles.widgetContent}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <span style={{ fontWeight: 'bold' }}>Conexión:</span>
+        <span>{connectionStatus}</span>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span style={{ fontWeight: 'bold' }}>Estado Puerta:</span>
+        <span>{doorStatus}</span>
+      </div>
+    </div>
+  </div>
+);
+
+const SecurityWidget: React.FC<{
+  magneticSensor: string;
+  pinStatus: string;
+  lastPinAttempt: string;
+  showPin: boolean;
+  setShowPin: React.Dispatch<React.SetStateAction<boolean>>;
+  styles: any;
+}> = ({ magneticSensor, pinStatus, lastPinAttempt, showPin, setShowPin, styles }) => (
+  <div style={{ ...styles.widget, backgroundColor: '#fbe9e7' }}>
+    <h3 style={{ ...styles.widgetTitle, color: '#d84315' }}>
+      <FontAwesomeIcon icon={faEyeSlash} style={{ ...styles.icon, color: '#d84315' }} />
+      Seguridad
+    </h3>
+    <div style={styles.widgetContent}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <span style={{ fontWeight: 'bold' }}>Sensor Magnético:</span>
+        <span>{magneticSensor}</span>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontWeight: 'bold' }}>PIN:</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span>{showPin ? lastPinAttempt : '****'}</span>
+          <button
+            onClick={() => setShowPin(!showPin)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#d84315',
+              fontSize: '16px'
+            }}
+            title={showPin ? 'Ocultar PIN' : 'Mostrar PIN'}
+          >
+            <FontAwesomeIcon icon={showPin ? faEyeSlash : faEye} />
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const SensorsWidget: React.FC<{
+  presenceStatus: string;
+  pirCount: number;
+  rfidStatus: string;
+  lastRFID: string;
+  styles: any;
+}> = ({ presenceStatus, pirCount, rfidStatus, lastRFID, styles }) => (
+  <div style={{ ...styles.widget, backgroundColor: '#e8f5e9' }}>
+    <h3 style={{ ...styles.widgetTitle, color: '#43a047' }}>
+      <FontAwesomeIcon icon={faEye} style={{ ...styles.icon, color: '#43a047' }} />
+      Sensores
+    </h3>
+    <div style={styles.widgetContent}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <span style={{ fontWeight: 'bold' }}>Presencia:</span>
+        <span>
+          {presenceStatus} {pirCount > 0 && `(${pirCount})`}
+        </span>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span style={{ fontWeight: 'bold' }}>RFID:</span>
+        <span>{rfidStatus}</span>
+      </div>
+    </div>
+  </div>
+);
+
+const EventLogWidget: React.FC<{
+  registros: Registro[];
+  loading: boolean;
+  error: string;
+}> = ({ registros, loading, error }) => (
+  <div style={{ 
+    maxHeight: '300px', 
+    overflowY: 'auto', 
+    marginTop: '20px', 
+    borderTop: '1px solid #eee', 
+    paddingTop: '20px' 
+  }}>
+    <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>
+      Últimos Eventos
+    </h3>
+    
+    {loading ? (
+      <div style={{ textAlign: 'center', padding: '20px' }}>Cargando registros...</div>
+    ) : error ? (
+      <div style={{ color: '#dc3545', textAlign: 'center', padding: '10px' }}>{error}</div>
+    ) : registros.length === 0 ? (
+      <div style={{ textAlign: 'center', padding: '10px', color: '#6c757d' }}>No hay registros disponibles</div>
+    ) : (
+      registros.slice(0, 5).map((registro) => (
+        <div key={registro._id} style={{
+          backgroundColor: '#f8f9fa',
+          borderRadius: '8px',
+          padding: '15px',
+          marginBottom: '10px',
+          textAlign: 'left',
+          borderLeft: registro.tipo === 'alarma' ? '4px solid #dc3545' : '4px solid #4CAF50'
+        }}>
+          <div style={{ fontSize: '14px', fontWeight: '600', color: '#333', marginBottom: '5px' }}>
+            {registro.mensaje}
+          </div>
+          <div style={{ fontSize: '12px', color: '#6c757d', marginBottom: '8px' }}>
+            {registro.descripcion}
+          </div>
+          <div style={{ fontSize: '11px', color: '#495057', textAlign: 'right' }}>
+            {new Date(registro.fecha).toLocaleString()}
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+);
+
+const NotificationWidget: React.FC<{ 
+  message: string; 
+  type: 'info' | 'warning' | 'error'; 
+}> = ({ message, type }) => (
+  <div style={{
+    position: 'fixed',
+    top: '20px',
+    right: '20px',
+    backgroundColor: type === 'error' ? '#ff4444' : type === 'warning' ? '#ffbb33' : '#4CAF50',
+    color: 'white',
+    padding: '15px',
+    borderRadius: '5px',
+    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+    zIndex: 1000,
+    display: 'flex',
+    alignItems: 'center',
+    animation: 'fadeIn 0.3s'
+  }}>
+    {message}
+    {type === 'error' && <span style={{ marginLeft: '10px', fontSize: '20px' }}>⚠️</span>}
+  </div>
+);
+
+const AlarmAlertWidget: React.FC<{ 
+  alarmEvent: Registro | null; 
+}> = ({ alarmEvent }) => (
+  <div style={{
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    backgroundColor: '#ff4444',
+    color: 'white',
+    padding: '20px',
+    borderRadius: '10px',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+    zIndex: 2000,
+    maxWidth: '80%',
+    textAlign: 'center',
+    animation: 'pulse 0.5s alternate infinite'
+  }}>
+    <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px' }}>¡ALARMA ACTIVADA!</div>
+    <div style={{ fontSize: '18px', marginBottom: '15px' }}>{alarmEvent?.mensaje}</div>
+    <div style={{ fontSize: '14px', opacity: 0.8 }}>
+      {alarmEvent?.descripcion}<br />
+      {alarmEvent?.fecha && new Date(alarmEvent.fecha).toLocaleString()}
+    </div>
+  </div>
+);
 
 const PantallaPuerta: React.FC = () => {
   // Estado del sistema
@@ -18,7 +209,6 @@ const PantallaPuerta: React.FC = () => {
     connectionStatus: 'Conectando...',
     presenceStatus: 'No detectado',
     rfidStatus: 'Esperando tarjeta...',
-    alarmStatus: 'Normal',
     pirCount: 0,
     magneticSensor: 'Cerrado',
     pinStatus: 'No ingresado',
@@ -28,24 +218,26 @@ const PantallaPuerta: React.FC = () => {
     alarmHistory: [] as string[],
     lastPinAttempt: '',
     lastUpdate: new Date().toISOString(),
-    lastAlarmState: 'Normal',
-    alarmTriggered: false
+    lastAlarmState: 'Normal'
   });
+
+  // Estado para mostrar/ocultar PIN
+  const [showPin, setShowPin] = useState(false);
 
   // Estado para registros
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [loadingRegistros, setLoadingRegistros] = useState(true);
   const [errorRegistros, setErrorRegistros] = useState('');
+  const [showAlarmAlert, setShowAlarmAlert] = useState(false);
+  const [alarmEvent, setAlarmEvent] = useState<Registro | null>(null);
 
   // Configuración MQTT
   const [client, setClient] = useState<mqtt.MqttClient | null>(null);
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [notification, setNotification] = useState<{message: string, type: 'info' | 'warning' | 'error'} | null>(null);
   
   // Refs
-  const alarmTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastPirNotificationRef = useRef<number>(0);
+  const previousRegistrosRef = useRef<Registro[]>([]);
 
   // Configuración MQTT
   const MQTT_CONFIG = {
@@ -69,64 +261,54 @@ const PantallaPuerta: React.FC = () => {
     }
   };
 
-// Función para obtener registros desde la API - Versión corregida
-const fetchRegistros = async () => {
-  try {
-    setLoadingRegistros(true);
-    setErrorRegistros('');
-    
-    // Primero intenta con la ruta preferida
+  // Función para obtener registros desde la API
+  const fetchRegistros = async () => {
     try {
-      const response = await axios.get<Registro[]>('http://localhost:8082/api/registros/ultimos');
-      if (response.status === 200) {
-        setRegistros(response.data);
-        
-        // Procesar alarmas para el historial
-        const alarmEvents = response.data
-          .filter(reg => reg.tipo === 'alarma') // Filtra por tipo en lugar de por mensaje
-          .map(reg => `${new Date(reg.fecha).toLocaleTimeString()}: ${reg.mensaje}`)
-          .slice(0, 5);
-        
-        setSystemState(prev => ({
-          ...prev,
-          alarmHistory: alarmEvents
-        }));
-        
-        return; // Salir si tuvo éxito
+      setLoadingRegistros(true);
+      setErrorRegistros('');
+      
+      // Intenta con ambas rutas posibles para mayor compatibilidad
+      const endpoints = ['/api/registros/ultimos', '/api/registros/get'];
+      let response;
+      
+      for (const endpoint of endpoints) {
+        try {
+          response = await axios.get<Registro[]>(`http://localhost:8082${endpoint}`);
+          if (response.status === 200) break;
+        } catch (err) {
+          console.warn(`Error con ${endpoint}:`, err);
+        }
       }
-    } catch (primaryError) {
-      console.log('Intento con /ultimos falló, probando con /get');
-    }
 
-    // Si falla, intenta con la ruta alternativa
-    const response = await axios.get<Registro[]>('http://localhost:8082/api/registros/get');
-    setRegistros(response.data);
-    
-    // Procesar alarmas para el historial
-    const alarmEvents = response.data
-      .filter(reg => reg.tipo === 'alarma')
-      .map(reg => `${new Date(reg.fecha).toLocaleTimeString()}: ${reg.mensaje}`)
-      .slice(0, 5);
-    
-    setSystemState(prev => ({
-      ...prev,
-      alarmHistory: alarmEvents
-    }));
+      if (!response) {
+        throw new Error('No se pudo obtener registros de ningún endpoint');
+      }
 
-  } catch (err: any) {
-    console.error("Error al cargar registros:", err);
-    
-    let errorMessage = 'Error al cargar registros';
-    if (err.response) {
-      console.error("Detalles del error:", err.response.data);
-      errorMessage = err.response.data.message || errorMessage;
+      // Verificar si hay nuevas alarmas
+      const newAlarms = response.data.filter(
+        reg => reg.tipo === 'alarma' && 
+        !previousRegistrosRef.current.some(
+          prevReg => prevReg._id === reg._id
+        )
+      );
+
+      if (newAlarms.length > 0) {
+        setAlarmEvent(newAlarms[0]);
+        setShowAlarmAlert(true);
+        setTimeout(() => setShowAlarmAlert(false), 5000);
+      }
+
+      setRegistros(response.data);
+      previousRegistrosRef.current = response.data;
+
+    } catch (err: any) {
+      console.error("Error al cargar registros:", err);
+      setErrorRegistros(err.message || 'Error al cargar registros');
+    } finally {
+      setLoadingRegistros(false);
     }
-    
-    setErrorRegistros(errorMessage);
-  } finally {
-    setLoadingRegistros(false);
-  }
-};
+  };
+
   // Mostrar notificación
   const showNotification = (message: string, type: 'info' | 'warning' | 'error', duration = 3000) => {
     if (notificationTimeoutRef.current) {
@@ -201,23 +383,6 @@ const fetchRegistros = async () => {
           case MQTT_CONFIG.topics.doorStatus:
             const newStatus = msg === 'open' ? 'Abierta' : 'Cerrada';
             updateState({ doorStatus: newStatus });
-
-            if (newStatus === 'Abierta') {
-              setTimeLeft(10);
-              const timer = setInterval(() => {
-                setTimeLeft(prev => {
-                  if (prev === null) return null;
-                  if (prev <= 1) {
-                    clearInterval(timer);
-                    handleDoorAction('cerrar');
-                    return null;
-                  }
-                  return prev - 1;
-                });
-              }, 1000);
-            } else {
-              setTimeLeft(null);
-            }
             break;
             
           case MQTT_CONFIG.topics.rfid:
@@ -226,7 +391,6 @@ const fetchRegistros = async () => {
               rfidStatus: `Tarjeta detectada: ${rfid}`,
               lastRFID: rfid
             });
-            
             break;
             
           case MQTT_CONFIG.topics.pir:
@@ -236,41 +400,15 @@ const fetchRegistros = async () => {
               pirCount: count,
               presenceStatus: presence
             });
-            
-            const now = Date.now();
-            if (count > 0 && (now - lastPirNotificationRef.current > 5000)) {
-              lastPirNotificationRef.current = now;
-              showNotification(`Movimiento detectado`, 'info', 2000);
-            }
             break;
             
           case MQTT_CONFIG.topics.alarm:
             const alarmState = msg === 'activada' ? 'ALARMA ACTIVADA!' : 'Normal';
             
             if (systemState.lastAlarmState !== alarmState) {
-              if (alarmState === 'ALARMA ACTIVADA!') {
-                updateState({
-                  alarmStatus: alarmState,
-                  lastAlarmState: alarmState,
-                  alarmTriggered: true
-                });
-                
-                showNotification('¡ALARMA ACTIVADA!', 'error', 3000);
-                
-                if (alarmTimeoutRef.current) clearTimeout(alarmTimeoutRef.current);
-                alarmTimeoutRef.current = setTimeout(() => {
-                  setSystemState(prev => ({
-                    ...prev,
-                    alarmTriggered: false
-                  }));
-                }, 3000);
-              } else if (systemState.alarmStatus === 'ALARMA ACTIVADA!') {
-                updateState({
-                  alarmStatus: alarmState,
-                  lastAlarmState: alarmState,
-                  alarmTriggered: false
-                });
-              }
+              updateState({
+                lastAlarmState: alarmState
+              });
             }
             break;
             
@@ -284,7 +422,6 @@ const fetchRegistros = async () => {
               pinStatus: msg ? 'PIN ingresado: ****' : 'No ingresado',
               lastPinAttempt: msg
             });
-            
             break;
             
           case MQTT_CONFIG.topics.system:
@@ -323,59 +460,57 @@ const fetchRegistros = async () => {
   const styles = {
     container: {
       display: 'flex',
-      justifyContent: 'center',
+      flexDirection: 'column' as const,
       alignItems: 'center',
       minHeight: '100vh',
       backgroundColor: '#f5f5f5',
       padding: '20px',
       fontFamily: 'Arial, sans-serif'
     },
-    card: {
+    titleCard: {
       backgroundColor: '#fff',
-      padding: '30px',
+      padding: '20px',
       borderRadius: '10px',
       boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-      width: '800px',
-      maxWidth: '95%',
+      width: '100%',
+      maxWidth: '800px',
       textAlign: 'center' as const,
-      position: 'relative' as const,
-      border: systemState.alarmTriggered ? '3px solid red' : 'none',
-      transition: 'border 0.3s ease'
+      marginBottom: '20px'
     },
-    statusSection: {
-      margin: '15px 0',
-      padding: '15px',
-      borderRadius: '8px',
-      backgroundColor: '#f8f9fa',
-      border: '1px solid #eee'
+    widgetsContainer: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+      gap: '20px',
+      width: '100%',
+      maxWidth: '1200px'
     },
-    sectionTitle: {
-      marginTop: 0,
-      marginBottom: '10px',
-      paddingBottom: '5px',
-      borderBottom: '1px solid #ddd',
-      color: '#333'
+    widget: {
+      padding: '20px',
+      borderRadius: '15px',
+      boxShadow: '0 6px 12px rgba(0,0,0,0.1)',
+      border: '1px solid #ddd',
+      transition: 'transform 0.3s, box-shadow 0.3s',
+      ':hover': {
+        transform: 'translateY(-5px)',
+        boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
+      }
     },
-    statusItem: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      margin: '10px 0',
-      alignItems: 'center'
-    },
-    statusLabel: {
+    widgetTitle: {
+      fontSize: '18px',
       fontWeight: 'bold',
-      color: '#555'
-    },
-    statusValue: {
-      textAlign: 'right' as const,
-      maxWidth: '60%',
-      wordBreak: 'break-word' as const
-    },
-    buttonGroup: {
+      marginBottom: '15px',
       display: 'flex',
-      justifyContent: 'center',
-      gap: '15px',
-      margin: '25px 0'
+      alignItems: 'center',
+      gap: '10px'
+    },
+    widgetContent: {
+      fontSize: '14px',
+      color: '#555',
+      lineHeight: '1.6'
+    },
+    controlsContainer: {
+      marginTop: '20px',
+      textAlign: 'center' as const
     },
     button: {
       padding: '12px 24px',
@@ -390,19 +525,6 @@ const fetchRegistros = async () => {
         backgroundColor: '#45a049'
       }
     },
-    closeButton: {
-      padding: '12px 24px',
-      backgroundColor: '#f44336',
-      color: 'white',
-      border: 'none',
-      borderRadius: '5px',
-      cursor: 'pointer',
-      fontSize: '16px',
-      transition: 'all 0.3s',
-      ':hover': {
-        backgroundColor: '#d32f2f'
-      }
-    },
     disabledButton: {
       padding: '12px 24px',
       backgroundColor: '#cccccc',
@@ -412,92 +534,16 @@ const fetchRegistros = async () => {
       cursor: 'not-allowed',
       fontSize: '16px'
     },
-    notification: (type: 'info' | 'warning' | 'error') => ({
-      position: 'fixed' as const,
-      top: '20px',
-      right: '20px',
-      backgroundColor: type === 'error' ? '#ff4444' : type === 'warning' ? '#ffbb33' : '#4CAF50',
-      color: 'white',
-      padding: '15px',
-      borderRadius: '5px',
-      boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-      zIndex: 1000,
-      display: 'flex',
-      alignItems: 'center',
-      animation: 'fadeIn 0.3s'
-    }),
-    alarmStatus: {
-      active: {
-        color: 'red',
-        fontWeight: 'bold',
-        animation: 'blink 1s infinite'
-      },
-      normal: {
-        color: 'green'
-      }
-    },
-    history: {
-      fontSize: '12px',
-      textAlign: 'left' as const,
-      marginTop: '10px',
-      color: '#666',
-      maxHeight: '100px',
-      overflowY: 'auto' as const,
-      padding: '5px',
-      backgroundColor: '#f0f0f0',
-      borderRadius: '4px'
-    },
-    timeLeft: {
-      color: '#E91E63',
-      fontWeight: 'bold'
-    },
-    lastUpdate: {
-      fontSize: '10px',
-      color: '#999',
-      textAlign: 'right' as const,
-      marginTop: '10px'
-    },
-    registrosContainer: {
-      maxHeight: '300px',
-      overflowY: 'auto' as const,
+    lastUpdateContainer: {
       marginTop: '20px',
-      borderTop: '1px solid #eee',
-      paddingTop: '20px'
-    },
-    registrosTitle: {
-      fontSize: '18px',
-      fontWeight: 'bold',
-      marginBottom: '10px',
       textAlign: 'center' as const
     },
-    registroItem: {
-      backgroundColor: '#f8f9fa',
-      borderRadius: '8px',
-      padding: '15px',
-      marginBottom: '10px',
-      textAlign: 'left' as const,
-      borderLeft: '4px solid #4CAF50'
-    },
-    registroMensaje: {
-      fontSize: '14px',
-      fontWeight: '600',
-      color: '#333',
-      marginBottom: '5px',
-    },
-    registroDescripcion: {
+    lastUpdate: {
       fontSize: '12px',
-      color: '#6c757d',
-      marginBottom: '8px',
+      color: '#999'
     },
-    registroFecha: {
-      fontSize: '11px',
-      color: '#495057',
-      textAlign: 'right' as const,
-    },
-    errorText: {
-      color: '#dc3545',
-      textAlign: 'center' as const,
-      padding: '10px'
+    icon: {
+      fontSize: '20px'
     }
   };
 
@@ -505,138 +551,81 @@ const fetchRegistros = async () => {
     <div style={styles.container}>
       {/* Notificación flotante */}
       {notification && (
-        <div style={styles.notification(notification.type)}>
-          {notification.message}
-          {notification.type === 'error' && (
-            <span style={{ marginLeft: '10px', fontSize: '20px' }}>⚠️</span>
-          )}
-        </div>
+        <NotificationWidget 
+          message={notification.message} 
+          type={notification.type} 
+        />
       )}
-      
-      <div style={styles.card}>
+
+      {/* Alerta de alarma */}
+      {showAlarmAlert && alarmEvent && (
+        <AlarmAlertWidget 
+          alarmEvent={alarmEvent}
+        />
+      )}
+
+      {/* Título principal */}
+      <div style={styles.titleCard}>
         <h2 style={{ marginBottom: '20px', color: '#333' }}>Control de Puerta IoT</h2>
+      </div>
 
-        {/* Botón de Abrir Puerta */}
-        <div style={styles.buttonGroup}>
-          <button
-            onClick={() => handleDoorAction('abrir')}
-            disabled={systemState.loading} // Solo se deshabilita si está cargando
-            style={systemState.loading ? styles.disabledButton : styles.button}
-          >
-            {systemState.loading ? 'Enviando...' : 'Abrir Puerta'}
-          </button>
+      {/* Contenedor de widgets */}
+      <div style={styles.widgetsContainer}>
+        {/* Widget de Estado del Sistema */}
+        <div style={styles.widget}>
+          <SystemStatusWidget 
+            connectionStatus={systemState.connectionStatus}
+            doorStatus={systemState.doorStatus}
+            styles={styles}
+          />
         </div>
 
-        {/* Sección de Estado General */}
-        <div style={styles.statusSection}>
-          <h3 style={styles.sectionTitle}>Estado del Sistema</h3>
-          <div style={styles.statusItem}>
-            <span style={styles.statusLabel}>Conexión:</span>
-            <span style={styles.statusValue}>{systemState.connectionStatus}</span>
-          </div>
-          <div style={styles.statusItem}>
-            <span style={styles.statusLabel}>Estado Puerta:</span>
-            <span style={styles.statusValue}>{systemState.doorStatus}</span>
-          </div>
-          {timeLeft !== null && systemState.doorStatus === 'Abierta' && (
-            <div style={styles.statusItem}>
-              <span style={styles.statusLabel}>Cierre automático en:</span>
-              <span style={{ ...styles.statusValue, ...styles.timeLeft }}>{timeLeft}s</span>
-            </div>
-          )}
+        {/* Widget de Seguridad */}
+        <div style={styles.widget}>
+          <SecurityWidget 
+            magneticSensor={systemState.magneticSensor}
+            pinStatus={systemState.pinStatus}
+            lastPinAttempt={systemState.lastPinAttempt}
+            showPin={showPin}
+            setShowPin={setShowPin}
+            styles={styles}
+          />
         </div>
 
-        {/* Sección de Seguridad */}
-        <div style={styles.statusSection}>
-          <h3 style={styles.sectionTitle}>Seguridad</h3>
-          <div style={styles.statusItem}>
-            <span style={styles.statusLabel}>Sensor Magnético:</span>
-            <span style={styles.statusValue}>{systemState.magneticSensor}</span>
-          </div>
-          <div style={styles.statusItem}>
-            <span style={styles.statusLabel}>Estado Alarma:</span>
-            <span style={{
-              ...styles.statusValue,
-              ...(systemState.alarmStatus === 'ALARMA ACTIVADA!' 
-                ? styles.alarmStatus.active 
-                : styles.alarmStatus.normal)
-            }}>
-              {systemState.alarmStatus}
-              {systemState.alarmStatus === 'ALARMA ACTIVADA!' && ' 🔔'}
-            </span>
-          </div>
-          <div style={styles.statusItem}>
-            <span style={styles.statusLabel}>PIN:</span>
-            <span style={styles.statusValue}>
-              {systemState.pinStatus.includes('ingresado') 
-                ? 'PIN ingresado: ****' 
-                : systemState.pinStatus}
-            </span>
-          </div>
-          {systemState.alarmHistory.length > 0 && (
-            <div style={styles.history}>
-              <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>Últimas alarmas:</div>
-              {systemState.alarmHistory.map((item, i) => (
-                <div key={i}>{item}</div>
-              ))}
-            </div>
-          )}
+        {/* Widget de Sensores */}
+        <div style={styles.widget}>
+          <SensorsWidget 
+            presenceStatus={systemState.presenceStatus}
+            pirCount={systemState.pirCount}
+            rfidStatus={systemState.rfidStatus}
+            lastRFID={systemState.lastRFID}
+            styles={styles}
+          />
         </div>
 
-        {/* Sección de Sensores */}
-        <div style={styles.statusSection}>
-          <h3 style={styles.sectionTitle}>Sensores</h3>
-          <div style={styles.statusItem}>
-            <span style={styles.statusLabel}>Presencia:</span>
-            <span style={styles.statusValue}>
-              {systemState.presenceStatus} 
-              {systemState.pirCount > 0 && ` (${systemState.pirCount})`}
-            </span>
-          </div>
-          <div style={styles.statusItem}>
-            <span style={styles.statusLabel}>RFID:</span>
-            <span style={styles.statusValue}>
-              {systemState.rfidStatus.replace('Tarjeta detectada: ', '')}
-            </span>
-          </div>
-          {systemState.lastRFID && (
-            <div style={{ ...styles.history, marginTop: '15px' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>Último RFID:</div>
-              <div>{systemState.lastRFID}</div>
-            </div>
-          )}
+        {/* Widget de Registros */}
+        <div style={styles.widget}>
+          <EventLogWidget 
+            registros={registros}
+            loading={loadingRegistros}
+            error={errorRegistros}
+          />
         </div>
+      </div>
 
-        {/* Sección de Registros */}
-        <div style={styles.registrosContainer}>
-          <h3 style={styles.registrosTitle}>Últimos Eventos</h3>
-          
-          {loadingRegistros ? (
-            <div style={{ textAlign: 'center', padding: '20px' }}>
-              Cargando registros...
-            </div>
-          ) : errorRegistros ? (
-            <div style={styles.errorText}>
-              {errorRegistros}
-            </div>
-          ) : registros.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '10px', color: '#6c757d' }}>
-              No hay registros disponibles
-            </div>
-          ) : (
-            registros.slice(0, 5).map((registro) => (
-              <div key={registro._id} style={styles.registroItem}>
-                <div style={styles.registroMensaje}>{registro.mensaje}</div>
-                <div style={styles.registroDescripcion}>{registro.descripcion}</div>
-                <div style={styles.registroFecha}>
-                  {new Date(registro.fecha).toLocaleString()}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+      {/* Controles */}
+      <div style={styles.controlsContainer}>
+        <button
+          onClick={() => handleDoorAction('abrir')}
+          disabled={systemState.doorStatus === 'Abierta' || systemState.loading}
+          style={systemState.doorStatus === 'Abierta' ? styles.disabledButton : styles.button}
+        >
+          {systemState.loading ? 'Enviando...' : 'Abrir Puerta'}
+        </button>
+      </div>
 
-        {/* Última actualización */}
+      {/* Última actualización */}
+      <div style={styles.lastUpdateContainer}>
         <div style={styles.lastUpdate}>
           Última actualización: {new Date(systemState.lastUpdate).toLocaleTimeString()}
         </div>
@@ -645,14 +634,13 @@ const fetchRegistros = async () => {
       {/* Estilos globales */}
       <style>
         {`
-          @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-          }
           @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-20px); }
             to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes pulse {
+            from { transform: translate(-50%, -50%) scale(1); }
+            to { transform: translate(-50%, -50%) scale(1.05); }
           }
         `}
       </style>
