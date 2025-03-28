@@ -1,94 +1,94 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const RegistrarHuella: React.FC = () => {
-    const [fingerprint, setFingerprint] = useState('');
-    const [message, setMessage] = useState('');
+const PantallaHuella: React.FC = () => {
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
-    const handleRegister = async () => {
-        try {
-            const token = localStorage.getItem('token'); // Obtén el token del usuario
-            const response = await axios.post<{ message: string }>(
-                'http://localhost:8082/api/users/register-fingerprint',
-                { fingerprint },
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`, // Envía el token en el encabezado
-                    },
-                }
-            );
+  const handleRegistrarHuella = async () => {
+    try {
+      setLoading(true); // Mostrar animación de carga
+      const response = await axios.get('http://192.168.8.4:8082/api/huella/registrar'); // Cambia la IP según tu configuración
+      setMessage(response.data); // Mostrar el mensaje recibido del backend
+    } catch (error) {
+      console.error('Error al registrar huella:', error);
+      setMessage('Error al registrar huella.');
+    } finally {
+      setLoading(false); // Ocultar animación de carga
+    }
+  };
 
-            setMessage(response.data.message);
-        } catch (error: any) {
-            if (error.response) {
-                setMessage(error.response.data.message);
-            } else {
-                setMessage('Error al conectar con el servidor.');
-            }
-        }
-    };
+  return (
+    <div style={styles.container}>
+      <h1 style={styles.title}>Registro de Huella</h1>
 
-    return (
-        <div style={styles.container}>
-            <h1 style={styles.title}>Registrar Huella</h1>
-            <input
-                type="text"
-                placeholder="Introduce tu huella"
-                value={fingerprint}
-                onChange={(e) => setFingerprint(e.target.value)}
-                style={styles.input}
-            />
-            <button onClick={handleRegister} style={styles.button}>
-                Registrar
-            </button>
-            {message && <p style={styles.message}>{message}</p>}
-        </div>
-    );
+      <div style={styles.iconContainer}>
+        <i className="fas fa-fingerprint" style={styles.icon}></i>
+      </div>
+
+      <button
+        onClick={handleRegistrarHuella}
+        style={styles.button}
+        disabled={loading}
+      >
+        {loading ? 'Registrando...' : 'Registrar Huella'}
+      </button>
+
+      {loading && <div className="spinner"></div>}
+
+      {message && <p style={styles.message}>{message}</p>}
+    </div>
+  );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-    container: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        backgroundColor: '#f4f4f4',
-        padding: '20px',
-    },
-    title: {
-        fontSize: '24px',
-        fontWeight: 'bold',
-        marginBottom: '20px',
-        color: '#333',
-    },
-    input: {
-        width: '300px',
-        padding: '10px',
-        marginBottom: '15px',
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        fontSize: '16px',
-    },
-    button: {
-        backgroundColor: '#2ECC71',
-        color: '#FFF',
-        padding: '10px 20px',
-        border: 'none',
-        borderRadius: '4px',
-        fontSize: '16px',
-        cursor: 'pointer',
-        transition: 'background-color 0.3s',
-    },
-    buttonHover: {
-        backgroundColor: '#28A745',
-    },
-    message: {
-        marginTop: '15px',
-        fontSize: '16px',
-        color: '#333',
-    },
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100vh',
+    backgroundColor: '#f4f4f4',
+    padding: '20px',
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: 'bold',
+    marginBottom: '20px',
+    color: '#333',
+  },
+  iconContainer: {
+    marginBottom: '20px',
+  },
+  icon: {
+    fontSize: '150px',
+    color: '#1E1E1E',
+  },
+  button: {
+    backgroundColor: '#2ECC71',
+    color: '#FFF',
+    padding: '10px 20px',
+    border: 'none',
+    borderRadius: '4px',
+    fontSize: '16px',
+    cursor: 'pointer',
+    transition: 'background-color 0.3s',
+  },
+  message: {
+    marginTop: '15px',
+    fontSize: '16px',
+    color: '#333',
+  },
+  spinner: {
+    border: '4px solid #f3f3f3',
+    borderTop: '4px solid #3498db',
+    borderRadius: '50%',
+    width: '40px',
+    height: '40px',
+    animation: 'spin 1s linear infinite',
+  },
 };
 
-export default RegistrarHuella;
+export default PantallaHuella;
+
+/* Move this keyframes block to a CSS file or use a styled-components approach */

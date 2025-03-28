@@ -9,6 +9,7 @@ import productRoutes from './src/routes/productRoutes';
 import preguntasFrecuentesRoutes from './src/routes/preguntasFrecuentesRoutes';
 import purchaseRoutes from './src/routes/purchaseRoutes';
 import registroRoutes from './src/routes/registroRoutes'; // Asegúrate de importar las rutas de registros
+import fingerprintRoutes from './src/routes/fingerprintRoutes';
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/preguntasFrecuentes', preguntasFrecuentesRoutes);
 app.use('/api/purchase', purchaseRoutes);
 app.use('/api/registros', registroRoutes); // Esta línea es la que faltaba
+app.use('/api/huella', fingerprintRoutes);
 
 // Ruta de prueba
 app.get('/api/health', (req, res) => {

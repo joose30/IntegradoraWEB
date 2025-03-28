@@ -37,8 +37,9 @@ export default function RFIDControlScreen() {
         const rfid = message.toString().trim();
         console.log('RFID recibido:', rfid);
         setRfidUID(rfid);
-        setAccessGranted(true);
+        setAccessGranted(true); // Cambia según tu lógica de validación
         setIsReading(false);
+        setLoading(false); // Detener la animación
       }
     });
 
@@ -60,6 +61,7 @@ export default function RFIDControlScreen() {
     }
 
     setIsReading(true);
+    setLoading(true); // Iniciar la animación
     console.log('Esperando datos de RFID...');
   };
 
@@ -80,7 +82,9 @@ export default function RFIDControlScreen() {
           <h2 style={styles.title}>Control RFID</h2>
 
           {loading ? (
-            <div style={styles.loader}>Cargando...</div>
+            <div style={styles.loader}>
+              <p className="blinking">Leyendo...</p>
+            </div>
           ) : rfidUID ? (
             <>
               <p style={styles.uidText}>UID: {rfidUID}</p>
@@ -103,6 +107,25 @@ export default function RFIDControlScreen() {
           </button>
         </div>
       </div>
+      <style>
+        {`
+          .blinking {
+            animation: blinkingText 1.5s infinite;
+          }
+
+          @keyframes blinkingText {
+            0% {
+              opacity: 1;
+            }
+            50% {
+              opacity: 0;
+            }
+            100% {
+              opacity: 1;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 }
@@ -131,11 +154,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderBottom: '1px solid #E0E0E0',
     marginBottom: '20px',
     paddingBottom: '10px',
-  },
-  logo: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#1E1E1E',
   },
   backButton: {
     fontSize: '24px',
