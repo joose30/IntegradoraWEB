@@ -27,7 +27,9 @@ const Header: React.FC = () => {
   return (
     <header style={styles.header}>
       <div style={styles.leftSection}>
-        <h1 style={styles.brand}>SEGURIX</h1>
+        <Link to="/home" style={styles.brand}>
+          SEGURIX
+        </Link>
       </div>
       <nav style={styles.nav}>
         <ul style={styles.navList}>

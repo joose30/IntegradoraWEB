@@ -8,6 +8,7 @@ const PantallaRecuperarConPregunta: React.FC = () => {
   const [secretAnswer, setSecretAnswer] = useState("");
   const [message, setMessage] = useState("");
   const [questions, setQuestions] = useState<{ id: string; pregunta: string }[]>([]);
+  const [isEmailValidated, setIsEmailValidated] = useState(false); // Nuevo estado
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,6 +27,30 @@ const PantallaRecuperarConPregunta: React.FC = () => {
     fetchQuestions();
   }, []);
 
+  const handleValidateEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const response = await axios.post<{ message: string; success: boolean }>(
+        "http://localhost:8082/api/users/validate-email",
+        { email },
+        { headers: { "Content-Type": "application/json" } }
+      );
+
+      setMessage(response.data.message);
+
+      if (response.data.success) {
+        setIsEmailValidated(true); // Cambiar el estado para mostrar el resto del formulario
+      }
+    } catch (error: any) {
+      if (error.response) {
+        setMessage(error.response.data.message);
+      } else {
+        setMessage("Error al conectar con el servidor");
+      }
+    }
+  };
+
   const handleValidateQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -41,7 +66,7 @@ const PantallaRecuperarConPregunta: React.FC = () => {
       );
 
       setMessage(response.data.message);
-      
+
       if (response.data.success) {
         setTimeout(() => {
           navigate("/login");
@@ -59,51 +84,68 @@ const PantallaRecuperarConPregunta: React.FC = () => {
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>Recuperar con Pregunta Secreta</h2>
-      <form onSubmit={handleValidateQuestion} style={styles.form}>
-        <label style={styles.label}>Email:</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={styles.input}
-          placeholder="Ingresa tu correo electrónico"
-        />
+      {!isEmailValidated ? (
+        <form onSubmit={handleValidateEmail} style={styles.form}>
+          <label style={styles.label}>Email:</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            style={styles.input}
+            placeholder="Ingresa tu correo electrónico"
+          />
+          <button type="submit" style={styles.button}>
+            Validar correo
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handleValidateQuestion} style={styles.form}>
+          <label style={styles.label}>Email:</label>
+          <input
+            type="email"
+            value={email}
+            disabled // Deshabilitar el campo de correo
+            style={styles.input}
+          />
 
-        <label style={styles.label}>Pregunta secreta:</label>
-        <select
-          value={secretQuestion}
-          onChange={(e) => setSecretQuestion(e.target.value)}
-          required
-          style={styles.input}
-        >
-          <option value="">Selecciona una pregunta</option>
-          {questions.map((q) => (
-            <option key={q.id} value={q.pregunta}>
-              {q.pregunta}
-            </option>
-          ))}
-        </select>
+          <label style={styles.label}>Pregunta secreta:</label>
+          <select
+            value={secretQuestion}
+            onChange={(e) => setSecretQuestion(e.target.value)}
+            required
+            style={styles.input}
+          >
+            <option value="">Selecciona una pregunta</option>
+            {questions.map((q) => (
+              <option key={q.id} value={q.pregunta}>
+                {q.pregunta}
+              </option>
+            ))}
+          </select>
 
-        <label style={styles.label}>Respuesta:</label>
-        <input
-          type="text"
-          value={secretAnswer}
-          onChange={(e) => setSecretAnswer(e.target.value)}
-          required
-          style={styles.input}
-          placeholder="Ingresa tu respuesta"
-        />
+          <label style={styles.label}>Respuesta:</label>
+          <input
+            type="text"
+            value={secretAnswer}
+            onChange={(e) => setSecretAnswer(e.target.value)}
+            required
+            style={styles.input}
+            placeholder="Ingresa tu respuesta"
+          />
 
-        <button type="submit" style={styles.button}>
-          Validar respuesta
-        </button>
-      </form>
+          <button type="submit" style={styles.button}>
+            Validar respuesta
+          </button>
+        </form>
+      )}
       {message && (
-        <p style={{
-          ...styles.message,
-          color: message.includes("Error") ? "#dc3545" : "#28a745"
-        }}>
+        <p
+          style={{
+            ...styles.message,
+            color: message.includes("Error") ? "#dc3545" : "#28a745",
+          }}
+        >
           {message}
         </p>
       )}

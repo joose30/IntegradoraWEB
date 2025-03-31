@@ -6,7 +6,10 @@ const HeaderPublico: React.FC = () => {
   return (
     <header style={styles.header}>
       <div style={styles.leftSection}>
-        <h1 style={styles.brand}>SEGURIX</h1>
+        {/* Envolver el título en un Link para redirigir al inicio */}
+        <Link to="/" style={styles.brand}>
+          SEGURIX
+        </Link>
       </div>
       <nav style={styles.nav}>
         <ul style={styles.navList}>
@@ -24,6 +27,7 @@ const HeaderPublico: React.FC = () => {
     </header>
   );
 };
+
 const styles = {
   header: {
     display: "flex",
@@ -67,7 +71,8 @@ const styles = {
     fontWeight: "bold",
     margin: 0,
     color: "#FFFFFF",
-  }
+    textDecoration: "none", // Asegurarse de que no tenga subrayado
+  },
 };
 
 export default HeaderPublico;

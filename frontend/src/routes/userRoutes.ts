@@ -185,6 +185,24 @@ router.post('/validate-question', async (req, res) => {
   }
 });
 
+router.post('/validate-email', async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    // Buscar al usuario por correo
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Correo no encontrado' });
+    }
+
+    res.status(200).json({ message: 'Correo válido', success: true });
+  } catch (error) {
+    console.error('Error al validar el correo:', error);
+    res.status(500).json({ message: 'Error en el servidor' });
+  }
+});
+
 router.get('/usuario', authMiddleware, async (req, res) => {
   try {
     const userId = req.user?.id; // Verificar si req.user está definido antes de acceder a id
