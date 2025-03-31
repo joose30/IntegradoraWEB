@@ -66,9 +66,11 @@ const Header: React.FC = () => {
               <li style={styles.navItem}>
                 <Link to="/perfil" style={styles.navLink}>Perfil</Link>
               </li>
+              {/* 
               <li style={styles.navItem}>
                 <Link to="/registrar-huella" style={styles.navLink}>Registrar Huella</Link>
               </li>
+              */}
               <Link to="/carrito" style={styles.cartLink}>
                 Carrito ({cart.length})
               </Link>

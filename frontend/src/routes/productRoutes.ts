@@ -2,6 +2,7 @@
 import express, { Router, RequestHandler } from 'express';
 import { addProduct, getProducts } from '../controllers/productController';
 import Product from '../models/productModel';
+import User from '../models/User';
 
 const router: Router = express.Router();
 
@@ -17,5 +18,7 @@ router.get('/categories', async (req, res) => {
     res.status(500).json({ message: 'Error al obtener categorías' });
   }
 });
+
+
 
 export default router;

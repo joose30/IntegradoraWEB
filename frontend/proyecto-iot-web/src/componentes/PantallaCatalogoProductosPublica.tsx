@@ -11,15 +11,16 @@ type Product = {
   image: string;
 };
 
-export default function PantallaCatalogoProductos() {
+export default function PantallaCatalogoProductosPublica() {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>([]); // Lista de categorías
-  const [selectedCategory, setSelectedCategory] = useState<string>(''); // Categoría seleccionada
+  const [categories, setCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [currentPage, setCurrentPage] = useState(1); // Página actual
-  const productsPerPage = 9; // Número de productos por página
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 9;
+  const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -51,7 +52,7 @@ export default function PantallaCatalogoProductos() {
   }, []);
 
   const handleProductClick = (product: Product) => {
-    navigate(`/productoDetailPublico`, { state: { product } });
+    navigate('/productoDetailPublico', { state: { product } });
   };
 
   const filteredProducts = selectedCategory
@@ -75,26 +76,58 @@ export default function PantallaCatalogoProductos() {
   };
 
   if (loading) {
-    return <div style={styles.loadingContainer}>Cargando...</div>;
+    return (
+      <div className="premium-loading-container">
+        <div className="premium-spinner">
+          <div className="spinner-circle"></div>
+          <div className="spinner-circle"></div>
+          <div className="spinner-circle"></div>
+        </div>
+        <p className="premium-loading-text">Cargando catálogo...</p>
+      </div>
+    );
   }
 
   if (error) {
-    return <div style={styles.errorContainer}>{error}</div>;
+    return (
+      <div className="premium-error-container">
+        <div className="error-icon-container">
+          <svg className="error-icon" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+        </div>
+        <h3 className="error-title">¡Error!</h3>
+        <p className="error-message">{error}</p>
+        <button className="retry-button" onClick={() => window.location.reload()}>
+          Reintentar
+        </button>
+      </div>
+    );
   }
 
   return (
-    <div style={styles.screen}>
-      <div style={styles.cardContainer}>
-        <h2 style={styles.title}>Catálogo de Productos</h2>
+    <div className="premium-container">
+      <div className="particle-background"></div>
+      
+      <div className="premium-card">
+        <div className="header-container">
+          <h1 className="premium-title">
+            <span className="title-highlight">Catálogo</span> de Productos
+          </h1>
+          <div className="title-decoration"></div>
+        </div>
 
-        <div style={styles.filterContainer}>
-          <label style={styles.filterLabel}>Categoría:</label>
+        <div className="filter-container">
+          <label className="filter-label">Filtrar por categoría:</label>
           <select
-            style={styles.filterSelect}
+            className="filter-select"
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            onChange={(e) => {
+              setSelectedCategory(e.target.value);
+              setCurrentPage(1);
+            }}
           >
-            <option value="">Todas</option>
+            <option value="">Todas las categorías</option>
             {categories.map((category) => (
               <option key={category} value={category}>
                 {category}
@@ -103,174 +136,423 @@ export default function PantallaCatalogoProductos() {
           </select>
         </div>
 
-        <div style={styles.productList}>
+        <div className="product-grid">
           {currentProducts.map((product) => (
             <div
               key={product._id}
-              style={styles.productCard}
+              className={`product-card ${hoveredProduct === product._id ? 'hover' : ''}`}
               onClick={() => handleProductClick(product)}
+              onMouseEnter={() => setHoveredProduct(product._id)}
+              onMouseLeave={() => setHoveredProduct(null)}
             >
-              <img
-                src={product.image}
-                alt={product.name}
-                style={styles.productImage}
-              />
-              <h3 style={styles.productName}>{product.name}</h3>
-              <p style={styles.productDescription}>{product.description}</p>
-              <div style={styles.detailsContainer}>
-                <span style={styles.priceText}>${product.price.toFixed(2)}</span>
-                <span style={styles.categoryText}>{product.category}</span>
+              <div className="product-image-container">
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="product-image"
+                />
+                <div className="product-overlay"></div>
+              </div>
+              <div className="product-content">
+                <h3 className="product-name">{product.name}</h3>
+                <p className="product-description">{product.description}</p>
+                <div className="product-footer">
+                  <span className="product-price">${product.price.toFixed(2)}</span>
+                  <span className="product-category">{product.category}</span>
+                </div>
               </div>
             </div>
           ))}
         </div>
 
-        <div style={styles.paginationContainer}>
+        <div className="pagination-container">
           <button
-            style={styles.paginationButton}
+            className={`pagination-button ${currentPage === 1 ? 'disabled' : ''}`}
             onClick={handlePreviousPage}
             disabled={currentPage === 1}
           >
+            <svg viewBox="0 0 24 24">
+              <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/>
+            </svg>
             Anterior
           </button>
-          <span style={styles.paginationInfo}>
+          <span className="pagination-info">
             Página {currentPage} de {Math.ceil(filteredProducts.length / productsPerPage)}
           </span>
           <button
-            style={styles.paginationButton}
+            className={`pagination-button ${currentPage === Math.ceil(filteredProducts.length / productsPerPage) ? 'disabled' : ''}`}
             onClick={handleNextPage}
             disabled={currentPage === Math.ceil(filteredProducts.length / productsPerPage)}
           >
             Siguiente
+            <svg viewBox="0 0 24 24">
+              <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+            </svg>
           </button>
         </div>
       </div>
+
+      <style>{`
+        .premium-container {
+          min-height: 100vh;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 2rem;
+          position: relative;
+          overflow: hidden;
+          font-family: 'Montserrat', sans-serif;
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+          color: #fff;
+        }
+
+        .particle-background {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+          background-size: 2px 2px;
+          opacity: 0.5;
+          z-index: 0;
+        }
+
+        .premium-card {
+          position: relative;
+          width: 100%;
+          max-width: 1200px;
+          background: rgba(26, 26, 46, 0.8);
+          backdrop-filter: blur(10px);
+          border-radius: 20px;
+          padding: 3rem;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          z-index: 1;
+          overflow: hidden;
+        }
+
+        .premium-card::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: radial-gradient(circle, rgba(92, 107, 192, 0.1) 0%, transparent 70%);
+          animation: rotate 20s linear infinite;
+          z-index: -1;
+        }
+
+        .header-container {
+          text-align: center;
+          margin-bottom: 3rem;
+          position: relative;
+        }
+
+        .premium-title {
+          font-size: 2.5rem;
+          font-weight: 700;
+          margin-bottom: 1rem;
+          background: linear-gradient(90deg, #fff 0%, #a5b4fc 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          position: relative;
+          display: inline-block;
+        }
+
+        .title-highlight {
+          font-weight: 800;
+          text-shadow: 0 0 10px rgba(165, 180, 252, 0.5);
+        }
+
+        .title-decoration {
+          height: 4px;
+          width: 100px;
+          background: linear-gradient(90deg, #5c6bc0, #3949ab);
+          margin: 0 auto;
+          border-radius: 2px;
+          box-shadow: 0 0 10px rgba(92, 107, 192, 0.5);
+        }
+
+        .filter-container {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin-bottom: 2rem;
+          gap: 1rem;
+        }
+
+        .filter-label {
+          font-size: 1rem;
+          color: rgba(255, 255, 255, 0.8);
+          font-weight: 500;
+        }
+
+        .filter-select {
+          padding: 0.75rem 1rem;
+          border-radius: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(30, 30, 60, 0.8);
+          color: white;
+          font-size: 1rem;
+          transition: all 0.3s;
+          min-width: 200px;
+        }
+
+        .filter-select:focus {
+          outline: none;
+          border-color: #5c6bc0;
+          box-shadow: 0 0 0 3px rgba(92, 107, 192, 0.3);
+        }
+
+        .product-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 2rem;
+          margin: 2rem 0;
+        }
+
+        .product-card {
+          background: rgba(30, 30, 60, 0.6);
+          border-radius: 15px;
+          overflow: hidden;
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+          cursor: pointer;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .product-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+          border-color: rgba(92, 107, 192, 0.3);
+        }
+
+        .product-image-container {
+          position: relative;
+          width: 100%;
+          height: 200px;
+        }
+
+        .product-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.5s ease;
+        }
+
+        .product-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(to top, rgba(26, 26, 46, 0.8), transparent);
+          opacity: 0.7;
+          transition: opacity 0.3s ease;
+        }
+
+        .product-card:hover .product-overlay {
+          opacity: 0.5;
+        }
+
+        .product-content {
+          padding: 1.5rem;
+        }
+
+        .product-name {
+          font-size: 1.25rem;
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+          color: white;
+        }
+
+        .product-description {
+          font-size: 0.875rem;
+          color: rgba(255, 255, 255, 0.7);
+          margin-bottom: 1rem;
+          line-height: 1.5;
+        }
+
+        .product-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .product-price {
+          font-size: 1.125rem;
+          font-weight: 700;
+          color: #2ecc71;
+        }
+
+        .product-category {
+          font-size: 0.75rem;
+          padding: 0.25rem 0.75rem;
+          border-radius: 20px;
+          background: rgba(92, 107, 192, 0.2);
+          color: #a5b4fc;
+        }
+
+        .pagination-container {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin-top: 3rem;
+          gap: 1.5rem;
+        }
+
+        .pagination-button {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1.5rem;
+          border-radius: 8px;
+          background: rgba(92, 107, 192, 0.2);
+          color: white;
+          border: none;
+          cursor: pointer;
+          transition: all 0.3s;
+          font-weight: 500;
+        }
+
+        .pagination-button svg {
+          width: 20px;
+          height: 20px;
+          fill: currentColor;
+        }
+
+        .pagination-button:hover:not(.disabled) {
+          background: rgba(92, 107, 192, 0.4);
+          transform: translateY(-2px);
+        }
+
+        .pagination-button.disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .pagination-info {
+          font-size: 1rem;
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Loading styles */
+        .premium-loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .premium-spinner {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin-bottom: 2rem;
+        }
+
+        .spinner-circle {
+          width: 15px;
+          height: 15px;
+          margin: 0 5px;
+          border-radius: 50%;
+          animation: bounce 1.5s infinite ease-in-out;
+        }
+
+        .spinner-circle:nth-child(1) {
+          background: #5c6bc0;
+          animation-delay: 0s;
+        }
+
+        .spinner-circle:nth-child(2) {
+          background: #3949ab;
+          animation-delay: 0.2s;
+        }
+
+        .spinner-circle:nth-child(3) {
+          background: #8e24aa;
+          animation-delay: 0.4s;
+        }
+
+        .premium-loading-text {
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 1.25rem;
+          letter-spacing: 1px;
+        }
+
+        /* Error styles */
+        .premium-error-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          padding: 2rem;
+          text-align: center;
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .error-icon-container {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          background: rgba(239, 68, 68, 0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 1.5rem;
+        }
+
+        .error-icon {
+          width: 40px;
+          height: 40px;
+          fill: #ef4444;
+        }
+
+        .error-title {
+          font-size: 1.5rem;
+          color: #fff;
+          margin-bottom: 1rem;
+        }
+
+        .error-message {
+          color: rgba(255, 255, 255, 0.7);
+          margin-bottom: 2rem;
+          max-width: 500px;
+        }
+
+        .retry-button {
+          background: rgba(239, 68, 68, 0.2);
+          color: #fff;
+          border: none;
+          padding: 0.75rem 1.5rem;
+          border-radius: 30px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+        }
+
+        .retry-button:hover {
+          background: rgba(239, 68, 68, 0.3);
+          transform: translateY(-2px);
+        }
+
+        /* Animations */
+        @keyframes rotate {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-15px); }
+        }
+      `}</style>
     </div>
   );
 }
-
-const styles: { [key: string]: React.CSSProperties } = {
-  screen: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: '100vh',
-    backgroundColor: '#E3EAFD',
-    padding: '20px',
-  },
-  cardContainer: {
-    width: '100%',
-    maxWidth: '1200px',
-    backgroundColor: '#FFFFFF',
-    borderRadius: '15px',
-    padding: '30px',
-    boxShadow: '0px 4px 15px rgba(0, 0, 0, 0.15)',
-    textAlign: 'center',
-  },
-  title: {
-    fontSize: '26px',
-    fontWeight: 'bold',
-    color: '#1E1E1E',
-    marginTop: '18px',
-  },
-  filterContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: '20px',
-    gap: '10px',
-  },
-  filterLabel: {
-    fontSize: '16px',
-    fontWeight: 'bold',
-  },
-  filterSelect: {
-    padding: '10px',
-    fontSize: '16px',
-    borderRadius: '5px',
-    border: '1px solid #ccc',
-  },
-  productList: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-    gap: '20px',
-    marginTop: '20px',
-  },
-  productCard: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: '8px',
-    padding: '15px',
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
-    cursor: 'pointer',
-    transition: 'transform 0.2s ease',
-  },
-  productImage: {
-    width: '100%',
-    height: '150px',
-    objectFit: 'cover',
-    borderRadius: '8px',
-    marginBottom: '10px',
-  },
-  productName: {
-    fontSize: '18px',
-    fontWeight: '600',
-    marginBottom: '5px',
-  },
-  productDescription: {
-    fontSize: '14px',
-    color: '#6c757d',
-    marginBottom: '8px',
-  },
-  detailsContainer: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  priceText: {
-    fontSize: '16px',
-    fontWeight: 'bold',
-    color: '#28a745',
-  },
-  categoryText: {
-    fontSize: '14px',
-    color: '#fff',
-    backgroundColor: '#007bff',
-    borderRadius: '4px',
-    padding: '4px 8px',
-  },
-  paginationContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: '20px',
-    gap: '10px',
-  },
-  paginationButton: {
-    padding: '10px 15px',
-    backgroundColor: '#007bff',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontWeight: 'bold',
-  },
-  paginationInfo: {
-    fontSize: '16px',
-    fontWeight: 'bold',
-  },
-  loadingContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100px',
-    fontSize: '18px',
-  },
-  errorContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100px',
-    color: '#dc3545',
-    fontSize: '16px',
-  },
-};

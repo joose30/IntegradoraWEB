@@ -1,4 +1,3 @@
-// IntegradoraWEB/frontend/proyecto-iot-web/src/componentes/PantallaAgregarProducto.tsx
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -10,6 +9,7 @@ const PantallaAgregarProducto: React.FC = () => {
   const [category, setCategory] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [hoveredButton, setHoveredButton] = useState(false);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -29,16 +29,16 @@ const PantallaAgregarProducto: React.FC = () => {
 
   const uploadImage = async () => {
     if (!image) return null;
-    
-    const preset_name = "ml_default"; // Reemplaza con tu upload preset name
-    const cloud_name = "dnwpy45qa"; // Reemplaza con tu cloud name
-    
+
+    const preset_name = "ml_default";
+    const cloud_name = "dnwpy45qa";
+
     const formData = new FormData();
     formData.append("file", image);
     formData.append("upload_preset", preset_name);
-    
+
     setLoading(true);
-    
+
     try {
       const response = await fetch(
         `https://api.cloudinary.com/v1_1/${cloud_name}/image/upload`,
@@ -47,7 +47,7 @@ const PantallaAgregarProducto: React.FC = () => {
           body: formData,
         }
       );
-      
+
       const data = await response.json();
       setLoading(false);
       return data.secure_url;
@@ -98,181 +98,309 @@ const PantallaAgregarProducto: React.FC = () => {
   };
 
   return (
-    <div style={styles.screen}>
-      <div style={styles.cardContainer}>
-        <div style={styles.contentContainer}>
-          <h2 style={styles.title}>Agregar Producto</h2>
+    <div className="premium-container">
+      <div className="particle-background"></div>
 
-          <label style={styles.label}>Nombre</label>
-          <input
-            type="text"
-            style={styles.input}
-            placeholder="Ingresa el nombre del producto"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+      <div className="premium-card">
+        <div className="header-container">
+          <h1 className="premium-title">
+            <span className="title-highlight">Agregar</span> Producto
+          </h1>
+          <div className="title-decoration"></div>
+        </div>
 
-          <label style={styles.label}>Descripción</label>
-          <input
-            type="text"
-            style={styles.input}
-            placeholder="Ingresa la descripción del producto"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
+        <div className="premium-form-container">
+          <div className="form-group">
+            <label className="form-label">Nombre</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Ingresa el nombre del producto"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
 
-          <label style={styles.label}>Precio</label>
-          <input
-            type="number"
-            style={styles.input}
-            placeholder="Ingresa el precio del producto"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-          />
+          <div className="form-group">
+            <label className="form-label">Descripción</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Ingresa la descripción del producto"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
 
-          <label style={styles.label}>Categoría</label>
-          <select
-            style={styles.input}
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            <option value="">Selecciona una categoría</option>
-            <option value="Puerta Inteligente">Puerta Inteligente</option>
-            <option value="Cerradura Inteligente">Cerradura Inteligente</option>
-          </select>
+          <div className="form-group">
+            <label className="form-label">Precio</label>
+            <input
+              type="number"
+              className="form-input"
+              placeholder="Ingresa el precio del producto"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+          </div>
 
-          <label style={styles.label}>Imagen</label>
-          <input
-            type="file"
-            style={styles.input}
-            onChange={handleImageChange}
-          />
+          <div className="form-group">
+            <label className="form-label">Categoría</label>
+            <select
+              className="form-input"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="">Selecciona una categoría</option>
+              <option value="Puerta Inteligente">Puerta Inteligente</option>
+              <option value="Cerradura Inteligente">Cerradura Inteligente</option>
+            </select>
+          </div>
 
-          <button 
-            style={styles.button} 
+          <div className="form-group">
+            <label className="form-label">Imagen</label>
+            <div className="file-input-container">
+              <label className="file-input-label">
+                {image ? image.name : "Seleccionar imagen"}
+                <input
+                  type="file"
+                  className="file-input"
+                  onChange={handleImageChange}
+                />
+              </label>
+            </div>
+          </div>
+
+          <button
+            className={`form-button ${hoveredButton ? "hover" : ""}`}
             onClick={handleAddProduct}
             disabled={loading}
+            onMouseEnter={() => setHoveredButton(true)}
+            onMouseLeave={() => setHoveredButton(false)}
           >
-            {loading ? "Subiendo imagen..." : "Agregar Producto"}
+            {loading ? (
+              <div className="button-spinner">
+                <div className="spinner-circle"></div>
+                <div className="spinner-circle"></div>
+                <div className="spinner-circle"></div>
+              </div>
+            ) : (
+              "Agregar Producto"
+            )}
           </button>
         </div>
       </div>
+
+      <style>{`
+        .premium-container {
+          min-height: 100vh;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 2rem;
+          position: relative;
+          overflow: hidden;
+          font-family: 'Montserrat', sans-serif;
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+          color: #fff;
+        }
+
+        .particle-background {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+          background-size: 2px 2px;
+          opacity: 0.5;
+          z-index: 0;
+        }
+
+        .premium-card {
+          position: relative;
+          width: 100%;
+          max-width: 800px;
+          background: rgba(26, 26, 46, 0.8);
+          backdrop-filter: blur(10px);
+          border-radius: 20px;
+          padding: 3rem;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          z-index: 1;
+          overflow: hidden;
+        }
+
+        .premium-card::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: radial-gradient(circle, rgba(92, 107, 192, 0.1) 0%, transparent 70%);
+          animation: rotate 20s linear infinite;
+          z-index: -1;
+        }
+
+        .header-container {
+          text-align: center;
+          margin-bottom: 3rem;
+          position: relative;
+        }
+
+        .premium-title {
+          font-size: 2.5rem;
+          font-weight: 700;
+          margin-bottom: 1rem;
+          background: linear-gradient(90deg, #fff 0%, #a5b4fc 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          position: relative;
+          display: inline-block;
+        }
+
+        .title-highlight {
+          font-weight: 800;
+          text-shadow: 0 0 10px rgba(165, 180, 252, 0.5);
+        }
+
+        .title-decoration {
+          height: 4px;
+          width: 100px;
+          background: linear-gradient(90deg, #5c6bc0, #3949ab);
+          margin: 0 auto;
+          border-radius: 2px;
+          box-shadow: 0 0 10px rgba(92, 107, 192, 0.5);
+        }
+
+        .premium-form-container {
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .form-label {
+          font-size: 1rem;
+          color: rgba(255, 255, 255, 0.8);
+          font-weight: 500;
+        }
+
+        .form-input {
+          padding: 0.75rem 1rem;
+          border-radius: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(30, 30, 60, 0.8);
+          color: white;
+          font-size: 1rem;
+          transition: all 0.3s;
+        }
+
+        .form-input:focus {
+          outline: none;
+          border-color: #5c6bc0;
+          box-shadow: 0 0 0 3px rgba(92, 107, 192, 0.3);
+        }
+
+        .file-input-container {
+          position: relative;
+        }
+
+        .file-input-label {
+          display: block;
+          padding: 0.75rem 1rem;
+          border-radius: 8px;
+          border: 1px dashed rgba(255, 255, 255, 0.3);
+          background: rgba(30, 30, 60, 0.5);
+          color: rgba(255, 255, 255, 0.7);
+          cursor: pointer;
+          transition: all 0.3s;
+          text-align: center;
+        }
+
+        .file-input-label:hover {
+          background: rgba(30, 30, 60, 0.7);
+          border-color: #5c6bc0;
+        }
+
+        .file-input {
+          position: absolute;
+          opacity: 0;
+          width: 0.1px;
+          height: 0.1px;
+          overflow: hidden;
+          z-index: -1;
+        }
+
+        .form-button {
+          padding: 1rem;
+          border-radius: 8px;
+          background: linear-gradient(90deg, #5c6bc0, #3949ab);
+          color: white;
+          font-weight: 600;
+          border: none;
+          cursor: pointer;
+          transition: all 0.3s;
+          font-size: 1rem;
+          margin-top: 1rem;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .form-button:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .form-button:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+
+        .button-spinner {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .spinner-circle {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: white;
+          animation: bounce 1.5s infinite ease-in-out;
+        }
+
+        .spinner-circle:nth-child(1) {
+          animation-delay: 0s;
+        }
+
+        .spinner-circle:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+
+        .spinner-circle:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+
+        @keyframes rotate {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+      `}</style>
     </div>
   );
-};
-
-// 🎨 **Estilos en JavaScript**
-const styles: { [key: string]: React.CSSProperties } = {
-  screen: {
-    flex: 1,
-    backgroundColor: "#E3EAFD",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    minHeight: "100vh",
-    padding: "20px",
-  },
-  cardContainer: {
-    width: "1200px",
-    backgroundColor: "#FFFFFF",
-    borderRadius: "15px",
-    padding: "30px",
-    boxShadow: "0px 4px 15px rgba(0, 0, 0, 0.15)",
-  },
-  /* Barra Superior */
-  topBar: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "15px",
-    borderBottom: "2px solid #E0E0E0",
-    paddingBottom: "12px",
-  },
-  logo: {
-    fontSize: "28px",
-    fontWeight: "bold",
-    color: "#1E1E1E",
-    textTransform: "uppercase",
-    letterSpacing: "1px",
-  },
-  /* Menú de Navegación */
-  nav: {
-    display: "flex",
-    gap: "15px",
-  },
-  navText: {
-    fontSize: "16px",
-    color: "#1E1E1E",
-    textDecoration: "none",
-    fontWeight: "500",
-  },
-  /* Contenido principal */
-  contentContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: "24px",
-    fontWeight: "bold",
-    marginBottom: "20px",
-    textAlign: "center",
-  },
-  label: {
-    alignSelf: "flex-start",
-    fontSize: "16px",
-    marginBottom: "5px",
-    fontWeight: "bold",
-  },
-  input: {
-    width: "100%",
-    height: "40px",
-    borderColor: "#ccc",
-    borderWidth: "1px",
-    borderStyle: "solid",
-    borderRadius: "5px",
-    marginBottom: "15px",
-    padding: "10px",
-    fontSize: "16px",
-  },
-  button: {
-    width: "100%",
-    height: "50px",
-    backgroundColor: "#007bff",
-    borderRadius: "5px",
-    color: "#fff",
-    fontSize: "18px",
-    fontWeight: "bold",
-    border: "none",
-    cursor: "pointer",
-  },
-  /* Footer */
-  footer: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginTop: "30px",
-    borderTop: "1px solid #E0E0E0",
-    paddingTop: "12px",
-    color: "#333",
-  },
-  footerLeft: {
-    flex: 1,
-  },
-  footerRight: {
-    flex: 1,
-    textAlign: "right",
-  },
-  footerText: {
-    fontSize: "16px",
-    color: "#2C2C2C",
-    marginBottom: "5px",
-  },
-  footerTitle: {
-    fontWeight: "bold",
-    fontSize: "18px",
-    marginTop: "10px",
-    textTransform: "uppercase",
-  },
 };
 
 export default PantallaAgregarProducto;

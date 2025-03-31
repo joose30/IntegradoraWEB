@@ -30,6 +30,10 @@ import CheckoutScreen from "./componentes/CheckoutScreen";
 import PantallaHuella from "./componentes/PantallaHuella";
 import PantallaPoliticasPage from "./componentes/PoliticasPage";
 import FingerprintRegistrationModal from "./componentes/FingerprintRegistrationModal";
+import PantallaTerminosyCondiciones from "./componentes/PantallaTerminosYCondiciones";
+import PantallaPoliticasPrivacidad from "./componentes/PantallaPoliticasPrivacidad";
+import PantallaPoliticasPrivacidadPublica from "./componentes/PantallaPoliticasPrivacidadPublica";
+import PantallaTerminosyCondicionesPublica from "./componentes/PantallaTerminosYCondicionesPublica";
 
 const App: React.FC = () => {
   const location = useLocation();
@@ -59,6 +63,8 @@ const App: React.FC = () => {
     '/productosPublico',
     '/productoDetailPublico',
     '/politicasPublico', // Ruta pública para políticas
+    '/politica-privacidad-publica', // Ruta pública para política de privacidad
+    '/terminos-condiciones-publica', // Ruta pública para términos y condiciones
 
   ];
 
@@ -89,6 +95,8 @@ const App: React.FC = () => {
           <Route path="/productoDetailPublico" element={<PantallaProductoDetailPublica />} />
           <Route path="/recuperar-contraseña" element={<PantallaRecuperarContraseña />} />
           <Route path="/recuperar-con-pregunta" element={<PantallaRecuperarConPregunta />} />
+          <Route path="/politica-privacidad-publica" element={<PantallaPoliticasPrivacidadPublica />} />
+          <Route path="/terminos-condiciones-publica" element={<PantallaTerminosyCondicionesPublica />} />
           <Route path="/politicasPublico" element={<PantallaPoliticasPage />} />
           <Route path="/registrar-huella" element={
             <FingerprintRegistrationModal
@@ -114,6 +122,8 @@ const App: React.FC = () => {
           <Route path="/producto/:id" element={<PantallaProductoDetail />} />
           <Route path="/carrito" element={<CartScreen />} />
           <Route path="/checkout" element={<CheckoutScreen />} />          <Route path="/politicas" element={isAuthenticated ? <PantallaPoliticasPage /> : <Navigate to="/politicasPublico" />} />
+          <Route path="/terminos-condiciones" element={isAuthenticated ? <PantallaTerminosyCondiciones /> : <Navigate to="/politicasPublico" />} />
+          <Route path="/politica-privacidad" element={isAuthenticated ? <PantallaPoliticasPrivacidad /> : <Navigate to="/politicasPublico" />} />
         </Routes>
       </div>
       

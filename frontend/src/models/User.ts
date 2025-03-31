@@ -13,6 +13,7 @@ export interface IUser extends Document {
   secretQuestion: string; // Nueva propiedad
   secretAnswer: string;   // Nueva propiedad
   fingerprint: string | null; // Nueva propiedad para la huella
+  devicePin: string; // Campo para el PIN del dispositivo
 }
 
 const userSchema = new mongoose.Schema<IUser>({
@@ -27,6 +28,7 @@ const userSchema = new mongoose.Schema<IUser>({
   secretQuestion: { type: String, required: true },
   secretAnswer: { type: String, required: true },
   fingerprint: { type: String, default: null }, // Nuevo campo para la huella
+  devicePin: { type: String, default: '' }, // Campo para el PIN del dispositivo
 });
 
 const User = mongoose.model<IUser>('User', userSchema);

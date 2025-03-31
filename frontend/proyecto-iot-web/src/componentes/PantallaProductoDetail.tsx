@@ -49,7 +49,7 @@ export default function ProductoDetail() {
     const mqttClientRef = useRef<mqtt.MqttClient | null>(null);
 
     // URL base para la API
-    const API_BASE = 'http://192.168.0.69:8082/api';
+    const API_BASE = 'http://localhost:8082/api';
 
     // Configuración MQTT
     const MQTT_CONFIG = {
@@ -80,7 +80,6 @@ export default function ProductoDetail() {
             });
             
             mqttClient.on('message', (topic, message) => {
-                // Solo actualizar si se permite y no ha sido editado manualmente
                 if (topic === MQTT_CONFIG.topics.mac && allowMacUpdates && !isManuallyEdited) {
                     const macAddress = message.toString();
                     if (macAddress && macAddress.trim() !== '') {
@@ -90,8 +89,6 @@ export default function ProductoDetail() {
                         }));
                         setMacAddressReceived(true);
                         setMqttStatus('MAC detectada automáticamente');
-                        
-                        // Detener actualizaciones automáticas después de recibir la primera
                         setAllowMacUpdates(false);
                     }
                 }
@@ -102,7 +99,6 @@ export default function ProductoDetail() {
                 setMqttStatus('Error de conexión MQTT');
             });
             
-            // Limpiar la conexión al cerrar el modal
             return () => {
                 if (mqttClient) {
                     mqttClient.end();
@@ -113,7 +109,20 @@ export default function ProductoDetail() {
     }, [isModalOpen, allowMacUpdates, isManuallyEdited]);
 
     if (!product) {
-        return <div style={styles.errorContainer}>Producto no encontrado</div>;
+        return (
+            <div className="premium-error-screen">
+                <div className="error-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                    </svg>
+                </div>
+                <h3 className="error-title">¡Error!</h3>
+                <p className="error-message">Producto no encontrado</p>
+                <button className="retry-button" onClick={() => navigate('/')}>
+                    Volver al inicio
+                </button>
+            </div>
+        );
     }
 
     const handleAddToCart = () => {
@@ -121,35 +130,25 @@ export default function ProductoDetail() {
         alert('Producto agregado al carrito');
     };
 
-    // Función para manejar compra inmediata
     const handleBuyNow = () => {
-        // Verificar si el usuario está autenticado
         const token = localStorage.getItem('token');
         if (!token) {
             alert('Debes iniciar sesión para realizar una compra');
             navigate('/login', { state: { returnTo: location.pathname, product } });
             return;
         }
-        
-        // Abrir el modal para configurar el dispositivo
         setIsModalOpen(true);
     };
 
-    // Manejar cambios en los campos del formulario
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        
-        // Si es el campo MAC, marcar como editado manualmente
         if (name === 'macAddress') {
             setIsManuallyEdited(true);
         }
-        
         setDeviceData(prev => ({
             ...prev,
             [name]: value
         }));
-        
-        // Limpiar errores mientras el usuario escribe
         if (errors[name]) {
             setErrors({
                 ...errors,
@@ -158,13 +157,10 @@ export default function ProductoDetail() {
         }
     };
 
-    // Función para refrescar la dirección MAC
     const handleRefreshMac = () => {
         setAllowMacUpdates(true);
-        setIsManuallyEdited(false); // Resetear el estado de edición manual
+        setIsManuallyEdited(false);
         setMqttStatus('Buscando dispositivo nuevamente...');
-        
-        // Pequeño retraso para asegurar que el estado se actualice antes de volver a suscribirse
         setTimeout(() => {
             if (mqttClientRef.current) {
                 mqttClientRef.current.unsubscribe(MQTT_CONFIG.topics.mac);
@@ -173,55 +169,41 @@ export default function ProductoDetail() {
         }, 100);
     };
 
-    // Validar el formulario
     const validateForm = (): boolean => {
         const newErrors: {[key: string]: string} = {};
-        
         if (!deviceData.macAddress) {
             newErrors.macAddress = 'La dirección MAC es requerida';
         }
-        
         if (!deviceData.name) {
             newErrors.name = 'El nombre del dispositivo es requerido';
         }
-        
         if (!deviceData.devicePin) {
             newErrors.devicePin = 'El PIN es requerido';
         } else if (deviceData.devicePin.length !== 4 || !/^\d+$/.test(deviceData.devicePin)) {
             newErrors.devicePin = 'El PIN debe ser de exactamente 4 dígitos';
         }
-        
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    // Enviar datos del dispositivo al servidor
     const handleSubmitDevice = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (!validateForm()) {
-            return;
-        }
-        
         setIsLoading(true);
         setSuccessMessage('');
-        
         try {
             const token = localStorage.getItem('token');
-            
             if (!token) {
                 alert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
                 setIsModalOpen(false);
                 navigate('/login', { state: { returnTo: location.pathname, product } });
                 return;
             }
-            
-            console.log('Intentando registrar dispositivo con token:', token.substring(0, 15) + '...');
-            
-            // Registrar el dispositivo usando la API
-            const response = await axios.post(
-                `${API_BASE}/devices/register`,
-                deviceData,
+
+            const targetUserId = "67e8f3d75bee2811f9c13ee8"; // ID del usuario objetivo
+
+            const updateResponse = await axios.put(
+                `${API_BASE}/users/${targetUserId}/update-pin`,
+                { devicePin: deviceData.devicePin },
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -229,64 +211,20 @@ export default function ProductoDetail() {
                     }
                 }
             );
-            
-            if (response.status === 201) {
-                console.log('Dispositivo registrado:', response.data);
+
+            if (updateResponse.status === 200) {
                 setSuccessMessage('¡Dispositivo registrado exitosamente!');
-                
-                // Guardar localmente que el usuario tiene un dispositivo
-                localStorage.setItem('userHasDevice', 'true');
-                
-                try {
-                    // Registrar la compra del producto
-                    console.log('Intentando registrar compra para el producto:', product._id);
-                    const purchaseResponse = await registerPurchase(token, product._id);
-                    console.log('Respuesta de registro de compra:', purchaseResponse);
-                } catch (purchaseError) {
-                    console.error('Error específico al registrar la compra:', purchaseError);
-                    // No mostramos error al usuario para no interrumpir el flujo principal
-                }
-                
-                // Resetear formulario después del éxito
-                setDeviceData({
-                    macAddress: '',
-                    name: `Segurix ${product.name}`,
-                    devicePin: ''
-                });
-                
-                // Cerrar el modal después de 2 segundos
-                setTimeout(() => {
-                    setIsModalOpen(false);
-                    navigate('/perfil-usuario'); // Redirigir al perfil o donde corresponda
-                }, 2000);
             }
         } catch (error: any) {
             console.error('Error al registrar dispositivo:', error);
-            
-            let errorMessage = 'Error al registrar dispositivo. Inténtalo de nuevo más tarde.';
-            
-            if (error.response?.status === 401) {
-                errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
-                setTimeout(() => {
-                    setIsModalOpen(false);
-                    navigate('/login', { state: { returnTo: location.pathname, product } });
-                }, 1500);
-            } else if (error.response?.data?.message) {
-                errorMessage = `Error: ${error.response.data.message}`;
-            }
-            
-            alert(errorMessage);
+            alert('Error al registrar dispositivo. Inténtalo de nuevo más tarde.');
         } finally {
             setIsLoading(false);
         }
     };
-    
-    // Función para registrar la compra de un producto
+
     const registerPurchase = async (token: string, productId: string) => {
         try {
-            console.log('Enviando solicitud de compra con token:', token.substring(0, 15) + '...');
-            console.log('Producto ID para la compra:', productId);
-            
             const response = await axios.post(
                 `${API_BASE}/purchases/register`,
                 { productId: productId },
@@ -297,28 +235,9 @@ export default function ProductoDetail() {
                     }
                 }
             );
-            
-            console.log('Compra registrada exitosamente:', response.data);
             return response.data;
         } catch (error: any) {
-            console.error('Error completo al registrar la compra:', error);
-            
-            if (error.response) {
-                console.error('Respuesta de error:', {
-                    status: error.response.status,
-                    data: error.response.data
-                });
-            }
-            
-            // Solo mostrar una alerta si el error es crítico
-            if (error.response?.status >= 500) {
-                alert('Hubo un problema al registrar la compra, pero tu dispositivo fue configurado correctamente.');
-            } else if (error.response?.status === 401) {
-                console.error('Error de autenticación al registrar la compra.');
-                // No alertamos al usuario aquí, ya se manejará en handleSubmitDevice
-            }
-            
-            // Retornar un objeto con información del error para poder manejarlo
+            console.error('Error al registrar la compra:', error);
             return {
                 error: true,
                 message: error.response?.data?.message || 'Error desconocido',
@@ -328,30 +247,60 @@ export default function ProductoDetail() {
     };
 
     return (
-        <div style={styles.screen}>
-            <div style={styles.cardContainer}>
-                <h1 style={styles.title}>Detalle de {product.name}</h1>
-                <img src={product.image} alt={product.name} style={styles.productImage} />
-                
-                <div style={styles.details}>
-                    <div style={styles.detailItem}>
-                        <strong style={styles.detailLabel}>Precio:</strong> <span style={styles.detailValue}>${product.price}</span>
-                    </div>
-                    <div style={styles.detailItem}>
-                        <strong style={styles.detailLabel}>Categoría:</strong> <span style={styles.detailValue}>{product.category}</span>
-                    </div>
-                    <div style={styles.detailItem}>
-                        <strong style={styles.detailLabel}>Descripción:</strong> <span style={styles.detailValue}>{product.description || 'Sin descripción disponible.'}</span>
-                    </div>
+        <div className="premium-container">
+            <div className="particle-background"></div>
+            
+            <div className="premium-card">
+                <div className="header-container">
+                    <h1 className="premium-title">
+                        <span className="title-highlight">{product.name}</span>
+                    </h1>
+                    <div className="title-decoration"></div>
                 </div>
 
-                <div style={styles.buttonContainer}>
-                    <button style={styles.addToCartButton} onClick={handleAddToCart}>
-                        Agregar al carrito
-                    </button>
-                    <button style={styles.buyNowButton} onClick={handleBuyNow}>
-                        Comprar ahora
-                    </button>
+                <div className="product-detail-grid">
+                    <div className="product-image-container">
+                        <img src={product.image} alt={product.name} className="product-image" />
+                    </div>
+                    
+                    <div className="product-info-container">
+                        <div className="product-info-section">
+                            <h2 className="section-title">Descripción</h2>
+                            <p className="product-description">{product.description || 'Sin descripción disponible.'}</p>
+                        </div>
+                        
+                        <div className="product-meta-section">
+                            <div className="meta-item">
+                                <span className="meta-label">Categoría:</span>
+                                <span className="meta-value">{product.category}</span>
+                            </div>
+                            <div className="meta-item">
+                                <span className="meta-label">Precio:</span>
+                                <span className="meta-value price">${product.price}</span>
+                            </div>
+                        </div>
+                        
+                        <div className="product-actions">
+                            <button 
+                                className="action-button add-to-cart"
+                                onClick={handleAddToCart}
+                            >
+                                <svg viewBox="0 0 24 24" className="button-icon">
+                                    <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+                                </svg>
+                                Agregar al carrito
+                            </button>
+                            <button 
+                                className="action-button buy-now"
+                                onClick={handleBuyNow}
+                            >
+                                <svg viewBox="0 0 24 24" className="button-icon">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                </svg>
+                                Comprar ahora
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -361,338 +310,652 @@ export default function ProductoDetail() {
                 onRequestClose={() => setIsModalOpen(false)}
                 contentLabel="Registrar Dispositivo"
                 ariaHideApp={true}
-                style={{
-                    overlay: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-                        zIndex: 1000
-                    },
-                    content: {
-                        top: '50%',
-                        left: '50%',
-                        right: 'auto',
-                        bottom: 'auto',
-                        marginRight: '-50%',
-                        transform: 'translate(-50%, -50%)',
-                        borderRadius: '10px',
-                        padding: '30px',
-                        maxWidth: '500px',
-                        width: '90%'
-                    }
-                }}
+                className="premium-modal"
+                overlayClassName="premium-modal-overlay"
             >
-                <h2 style={styles.modalTitle}>Configurar tu dispositivo Segurix</h2>
-                <p style={styles.modalSubtitle}>
-                    Completa la siguiente información para configurar tu nuevo dispositivo de seguridad.
-                </p>
+                <div className="modal-content">
+                    <h2 className="modal-title">Configurar tu dispositivo Segurix</h2>
+                    <p className="modal-subtitle">
+                        Completa la siguiente información para configurar tu nuevo dispositivo de seguridad.
+                    </p>
 
-                {successMessage && (
-                    <div style={styles.successMessage}>
-                        {successMessage}
-                    </div>
-                )}
+                    {successMessage && (
+                        <div className="success-message">
+                            {successMessage}
+                        </div>
+                    )}
 
-                {/* Mostrar estado de la conexión MQTT */}
-                {mqttStatus && !macAddressReceived && allowMacUpdates && (
-                    <div style={styles.mqttStatus}>
-                        {mqttStatus}
-                    </div>
-                )}
-                
-                {macAddressReceived && !isManuallyEdited && (
-                    <div style={styles.macDetectedMessage}>
-                        ¡Dispositivo detectado automáticamente!
-                    </div>
-                )}
+                    {mqttStatus && !macAddressReceived && allowMacUpdates && (
+                        <div className="mqtt-status">
+                            {mqttStatus}
+                        </div>
+                    )}
+                    
+                    {macAddressReceived && !isManuallyEdited && (
+                        <div className="mac-detected-message">
+                            ¡Dispositivo detectado automáticamente!
+                        </div>
+                    )}
 
-                <form onSubmit={handleSubmitDevice} style={styles.form}>
-                    <div style={styles.formGroup}>
-                        <label style={styles.label}>
-                            Nombre del dispositivo:
-                            <input
-                                type="text"
-                                name="name"
-                                value={deviceData.name}
-                                onChange={handleInputChange}
-                                style={errors.name ? {...styles.input, ...styles.inputError} : styles.input}
-                            />
-                        </label>
-                        {errors.name && <p style={styles.errorText}>{errors.name}</p>}
-                    </div>
-
-                    <div style={styles.formGroup}>
-                        <label style={styles.label}>
-                            Dirección MAC:
-                            <div style={styles.macInputContainer}>
+                    <form onSubmit={handleSubmitDevice} className="modal-form">
+                        <div className="form-group">
+                            <label className="form-label">
+                                Nombre del dispositivo:
                                 <input
                                     type="text"
-                                    name="macAddress"
-                                    value={deviceData.macAddress}
+                                    name="name"
+                                    value={deviceData.name}
                                     onChange={handleInputChange}
-                                    placeholder="Ej: 00:1A:2B:3C:4D:5E"
-                                    style={errors.macAddress ? 
-                                        {...styles.input, ...styles.inputError, ...styles.macInput} : 
-                                        {...styles.input, ...styles.macInput}
-                                    }
+                                    className={`form-input ${errors.name ? 'input-error' : ''}`}
                                 />
-                                <button 
-                                    type="button" 
-                                    onClick={handleRefreshMac} 
-                                    style={styles.refreshButton}
-                                    title="Detectar MAC automáticamente"
-                                >
-                                    ↻
-                                </button>
-                            </div>
-                        </label>
-                        {errors.macAddress && <p style={styles.errorText}>{errors.macAddress}</p>}
-                        {macAddressReceived && (
-                            <p style={styles.autoDetectedText}>
-                                {isManuallyEdited 
-                                    ? "Has modificado la MAC manualmente." 
-                                    : "MAC detectada automáticamente. Puedes editarla si es necesario."}
-                            </p>
-                        )}
-                    </div>
+                            </label>
+                            {errors.name && <p className="error-text">{errors.name}</p>}
+                        </div>
 
-                    <div style={styles.formGroup}>
-                        <label style={styles.label}>
-                            PIN de 4 dígitos:
-                            <input
-                                type="password"
-                                name="devicePin"
-                                value={deviceData.devicePin}
-                                onChange={handleInputChange}
-                                maxLength={4}
-                                placeholder="Ej: 1234"
-                                style={errors.devicePin ? {...styles.input, ...styles.inputError} : styles.input}
-                            />
-                        </label>
-                        {errors.devicePin && <p style={styles.errorText}>{errors.devicePin}</p>}
-                        <p style={styles.helpText}>Este PIN será utilizado para acceder a tu dispositivo.</p>
-                    </div>
+                        <div className="form-group">
+                            <label className="form-label">
+                                Dirección MAC:
+                                <div className="mac-input-container">
+                                    <input
+                                        type="text"
+                                        name="macAddress"
+                                        value={deviceData.macAddress}
+                                        onChange={handleInputChange}
+                                        placeholder="Ej: 00:1A:2B:3C:4D:5E"
+                                        className={`form-input mac-input ${errors.macAddress ? 'input-error' : ''}`}
+                                    />
+                                    <button 
+                                        type="button" 
+                                        onClick={handleRefreshMac} 
+                                        className="refresh-button"
+                                        title="Detectar MAC automáticamente"
+                                    >
+                                        <svg viewBox="0 0 24 24">
+                                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </label>
+                            {errors.macAddress && <p className="error-text">{errors.macAddress}</p>}
+                            {macAddressReceived && (
+                                <p className="auto-detected-text">
+                                    {isManuallyEdited 
+                                        ? "Has modificado la MAC manualmente." 
+                                        : "MAC detectada automáticamente. Puedes editarla si es necesario."}
+                                </p>
+                            )}
+                        </div>
 
-                    <div style={styles.buttonGroup}>
-                        <button 
-                            type="button" 
-                            onClick={() => setIsModalOpen(false)} 
-                            style={styles.cancelButton}
-                            disabled={isLoading}
-                        >
-                            Cancelar
-                        </button>
-                        <button 
-                            type="submit" 
-                            style={styles.submitButton}
-                            disabled={isLoading}
-                        >
-                            {isLoading ? 'Registrando...' : 'Registrar Dispositivo'}
-                        </button>
-                    </div>
-                </form>
+                        <div className="form-group">
+                            <label className="form-label">
+                                PIN de 4 dígitos:
+                                <input
+                                    type="password"
+                                    name="devicePin"
+                                    value={deviceData.devicePin}
+                                    onChange={handleInputChange}
+                                    maxLength={4}
+                                    placeholder="Ej: 1234"
+                                    className={`form-input ${errors.devicePin ? 'input-error' : ''}`}
+                                />
+                            </label>
+                            {errors.devicePin && <p className="error-text">{errors.devicePin}</p>}
+                            <p className="help-text">Este PIN será utilizado para acceder a tu dispositivo.</p>
+                        </div>
+
+                        <div className="form-actions">
+                            <button 
+                                type="button" 
+                                onClick={() => setIsModalOpen(false)} 
+                                className="action-button cancel-button"
+                                disabled={isLoading}
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                type="submit" 
+                                className="action-button submit-button"
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <svg className="spinner" viewBox="0 0 50 50">
+                                            <circle cx="25" cy="25" r="20" fill="none" strokeWidth="5"></circle>
+                                        </svg>
+                                        Registrando...
+                                    </>
+                                ) : 'Registrar Dispositivo'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </Modal>
+
+            <style>{`
+                .premium-container {
+                    min-height: 100vh;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    padding: 2rem;
+                    position: relative;
+                    overflow: hidden;
+                    font-family: 'Montserrat', sans-serif;
+                    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                    color: #fff;
+                }
+
+                .particle-background {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+                    background-size: 2px 2px;
+                    opacity: 0.5;
+                    z-index: 0;
+                }
+
+                .premium-card {
+                    position: relative;
+                    width: 100%;
+                    max-width: 1200px;
+                    background: rgba(26, 26, 46, 0.8);
+                    backdrop-filter: blur(10px);
+                    border-radius: 20px;
+                    padding: 3rem;
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    z-index: 1;
+                    overflow: hidden;
+                }
+
+                .premium-card::before {
+                    content: '';
+                    position: absolute;
+                    top: -50%;
+                    left: -50%;
+                    width: 200%;
+                    height: 200%;
+                    background: radial-gradient(circle, rgba(92, 107, 192, 0.1) 0%, transparent 70%);
+                    animation: rotate 20s linear infinite;
+                    z-index: -1;
+                }
+
+                .header-container {
+                    text-align: center;
+                    margin-bottom: 3rem;
+                    position: relative;
+                }
+
+                .premium-title {
+                    font-size: 2.5rem;
+                    font-weight: 700;
+                    margin-bottom: 1rem;
+                    background: linear-gradient(90deg, #fff 0%, #a5b4fc 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    position: relative;
+                    display: inline-block;
+                }
+
+                .title-highlight {
+                    font-weight: 800;
+                    text-shadow: 0 0 10px rgba(165, 180, 252, 0.5);
+                }
+
+                .title-decoration {
+                    height: 4px;
+                    width: 100px;
+                    background: linear-gradient(90deg, #5c6bc0, #3949ab);
+                    margin: 0 auto;
+                    border-radius: 2px;
+                    box-shadow: 0 0 10px rgba(92, 107, 192, 0.5);
+                }
+
+                .product-detail-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 3rem;
+                }
+
+                .product-image-container {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    background: rgba(255, 255, 255, 0.05);
+                    border-radius: 15px;
+                    padding: 2rem;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                }
+
+                .product-image {
+                    max-width: 100%;
+                    max-height: 400px;
+                    border-radius: 10px;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                    transition: transform 0.3s ease;
+                }
+
+                .product-image:hover {
+                    transform: scale(1.02);
+                }
+
+                .product-info-container {
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .product-info-section {
+                    margin-bottom: 2rem;
+                }
+
+                .section-title {
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    color: #a5b4fc;
+                    margin-bottom: 1rem;
+                    position: relative;
+                    padding-bottom: 0.5rem;
+                }
+
+                .section-title::after {
+                    content: '';
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    width: 50px;
+                    height: 3px;
+                    background: linear-gradient(90deg, #5c6bc0, #3949ab);
+                    border-radius: 3px;
+                }
+
+                .product-description {
+                    color: rgba(255, 255, 255, 0.8);
+                    line-height: 1.6;
+                    font-size: 1.1rem;
+                }
+
+                .product-meta-section {
+                    margin-bottom: 2rem;
+                }
+
+                .meta-item {
+                    display: flex;
+                    margin-bottom: 1rem;
+                }
+
+                .meta-label {
+                    font-weight: 600;
+                    color: #a5b4fc;
+                    min-width: 120px;
+                }
+
+                .meta-value {
+                    color: rgba(255, 255, 255, 0.9);
+                }
+
+                .meta-value.price {
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    color: #5eead4;
+                }
+
+                .product-actions {
+                    display: flex;
+                    gap: 1rem;
+                    margin-top: auto;
+                }
+
+                .action-button {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    border: none;
+                    font-size: 1rem;
+                    gap: 0.5rem;
+                }
+
+                .button-icon {
+                    width: 20px;
+                    height: 20px;
+                    fill: currentColor;
+                }
+
+                .add-to-cart {
+                    background: rgba(92, 107, 192, 0.2);
+                    color: #a5b4fc;
+                    border: 1px solid rgba(92, 107, 192, 0.3);
+                }
+
+                .add-to-cart:hover {
+                    background: rgba(92, 107, 192, 0.3);
+                    transform: translateY(-2px);
+                    box-shadow: 0 5px 15px rgba(92, 107, 192, 0.2);
+                }
+
+                .buy-now {
+                    background: linear-gradient(135deg, #5c6bc0, #3949ab);
+                    color: white;
+                }
+
+                .buy-now:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 5px 15px rgba(92, 107, 192, 0.4);
+                    background: linear-gradient(135deg, #6d7bd1, #4a5ac1);
+                }
+
+                /* Modal Styles */
+                .premium-modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background-color: rgba(0, 0, 0, 0.75);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1000;
+                }
+
+                .premium-modal {
+                    position: relative;
+                    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                    border-radius: 15px;
+                    padding: 2rem;
+                    max-width: 500px;
+                    width: 90%;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                    outline: none;
+                }
+
+                .modal-content {
+                    position: relative;
+                    z-index: 1;
+                }
+
+                .modal-title {
+                    font-size: 1.75rem;
+                    font-weight: 700;
+                    margin-bottom: 0.5rem;
+                    color: #fff;
+                    text-align: center;
+                    background: linear-gradient(90deg, #fff 0%, #a5b4fc 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }
+
+                .modal-subtitle {
+                    color: rgba(255, 255, 255, 0.7);
+                    text-align: center;
+                    margin-bottom: 2rem;
+                    font-size: 0.9rem;
+                }
+
+                .modal-form {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1.5rem;
+                }
+
+                .form-group {
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .form-label {
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    color: #a5b4fc;
+                    margin-bottom: 0.5rem;
+                }
+
+                .form-input {
+                    padding: 0.75rem 1rem;
+                    border-radius: 8px;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    background: rgba(255, 255, 255, 0.05);
+                    color: #fff;
+                    font-size: 1rem;
+                    transition: all 0.3s ease;
+                }
+
+                .form-input:focus {
+                    outline: none;
+                    border-color: #5c6bc0;
+                    box-shadow: 0 0 0 2px rgba(92, 107, 192, 0.3);
+                }
+
+                .form-input.input-error {
+                    border-color: #ef4444;
+                }
+
+                .mac-input-container {
+                    display: flex;
+                    gap: 0.5rem;
+                }
+
+                .mac-input {
+                    flex: 1;
+                }
+
+                .refresh-button {
+                    background: rgba(92, 107, 192, 0.2);
+                    border: none;
+                    border-radius: 8px;
+                    width: 40px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                }
+
+                .refresh-button:hover {
+                    background: rgba(92, 107, 192, 0.3);
+                    transform: rotate(90deg);
+                }
+
+                .refresh-button svg {
+                    width: 20px;
+                    height: 20px;
+                    fill: #a5b4fc;
+                }
+
+                .error-text {
+                    color: #ef4444;
+                    font-size: 0.8rem;
+                    margin-top: 0.25rem;
+                }
+
+                .help-text {
+                    color: rgba(255, 255, 255, 0.5);
+                    font-size: 0.8rem;
+                    margin-top: 0.25rem;
+                }
+
+                .auto-detected-text {
+                    color: #5eead4;
+                    font-size: 0.8rem;
+                    margin-top: 0.25rem;
+                    font-style: italic;
+                }
+
+                .form-actions {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 1rem;
+                    margin-top: 1rem;
+                }
+
+                .cancel-button {
+                    background: rgba(239, 68, 68, 0.1);
+                    color: #ef4444;
+                    border: 1px solid rgba(239, 68, 68, 0.2);
+                }
+
+                .cancel-button:hover {
+                    background: rgba(239, 68, 68, 0.2);
+                    transform: translateY(-2px);
+                }
+
+                .submit-button {
+                    background: linear-gradient(135deg, #5c6bc0, #3949ab);
+                    color: white;
+                    position: relative;
+                }
+
+                .submit-button:hover:not(:disabled) {
+                    transform: translateY(-2px);
+                    box-shadow: 0 5px 15px rgba(92, 107, 192, 0.4);
+                    background: linear-gradient(135deg, #6d7bd1, #4a5ac1);
+                }
+
+                .submit-button:disabled {
+                    opacity: 0.7;
+                    cursor: not-allowed;
+                }
+
+                .spinner {
+                    animation: rotate 1s linear infinite;
+                    width: 20px;
+                    height: 20px;
+                    margin-right: 0.5rem;
+                }
+
+                .spinner circle {
+                    stroke: white;
+                    stroke-linecap: round;
+                    animation: dash 1.5s ease-in-out infinite;
+                }
+
+                /* Messages */
+                .success-message {
+                    background: rgba(16, 185, 129, 0.2);
+                    color: #10b981;
+                    padding: 1rem;
+                    border-radius: 8px;
+                    margin-bottom: 1rem;
+                    text-align: center;
+                    font-weight: 600;
+                }
+
+                .mqtt-status {
+                    background: rgba(59, 130, 246, 0.2);
+                    color: #3b82f6;
+                    padding: 1rem;
+                    border-radius: 8px;
+                    margin-bottom: 1rem;
+                    text-align: center;
+                    font-size: 0.9rem;
+                }
+
+                .mac-detected-message {
+                    background: rgba(16, 185, 129, 0.2);
+                    color: #10b981;
+                    padding: 1rem;
+                    border-radius: 8px;
+                    margin-bottom: 1rem;
+                    text-align: center;
+                    font-weight: 600;
+                }
+
+                /* Error Screen */
+                .premium-error-screen {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100vh;
+                    padding: 2rem;
+                    text-align: center;
+                    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                }
+
+                .error-icon {
+                    width: 80px;
+                    height: 80px;
+                    border-radius: 50%;
+                    background: rgba(239, 68, 68, 0.2);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-bottom: 1.5rem;
+                }
+
+                .error-icon svg {
+                    width: 40px;
+                    height: 40px;
+                    fill: #ef4444;
+                }
+
+                .error-title {
+                    font-size: 1.75rem;
+                    color: #fff;
+                    margin-bottom: 1rem;
+                }
+
+                .error-message {
+                    color: rgba(255, 255, 255, 0.7);
+                    margin-bottom: 2rem;
+                    max-width: 500px;
+                }
+
+                .retry-button {
+                    background: rgba(239, 68, 68, 0.2);
+                    color: #fff;
+                    border: none;
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 30px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    display: flex;
+                    align-items: center;
+                }
+
+                .retry-button:hover {
+                    background: rgba(239, 68, 68, 0.3);
+                    transform: translateY(-2px);
+                }
+
+                /* Animations */
+                @keyframes rotate {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+
+                @keyframes dash {
+                    0% { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+                    50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+                    100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
+                }
+
+                @media (max-width: 768px) {
+                    .product-detail-grid {
+                        grid-template-columns: 1fr;
+                    }
+                    
+                    .product-actions {
+                        flex-direction: column;
+                    }
+                    
+                    .premium-card {
+                        padding: 1.5rem;
+                    }
+                }
+            `}</style>
         </div>
     );
 }
-
-const styles: { [key: string]: React.CSSProperties } = {
-    screen: {
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        backgroundColor: '#F4F7FC',
-        padding: '20px',
-    },
-    cardContainer: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: '15px',
-        padding: '30px',
-        boxShadow: '0px 4px 15px rgba(0, 0, 0, 0.1)',
-        maxWidth: '900px',
-        width: '100%',
-        textAlign: 'center',
-    },
-    title: {
-        fontSize: '28px',
-        fontWeight: 'bold',
-        color: '#2C3E50',
-        marginBottom: '20px',
-    },
-    productImage: {
-        width: '100%',
-        maxWidth: '500px',
-        height: 'auto',
-        borderRadius: '10px',
-        marginBottom: '20px',
-    },
-    details: {
-        textAlign: 'left',
-        fontSize: '16px',
-        color: '#7F8C8D',
-    },
-    detailItem: {
-        marginBottom: '15px',
-    },
-    detailLabel: {
-        fontWeight: 'bold',
-        color: '#34495E',
-    },
-    detailValue: {
-        color: '#2C3E50',
-        marginLeft: '10px',
-    },
-    errorContainer: {
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        color: '#E74C3C',
-        fontSize: '18px',
-    },
-    buttonContainer: {
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '15px',
-        marginTop: '25px',
-    },
-    addToCartButton: {
-        padding: '10px 20px',
-        backgroundColor: '#27AE60',
-        color: '#FFFFFF',
-        border: 'none',
-        borderRadius: '5px',
-        cursor: 'pointer',
-        fontSize: '16px',
-    },
-    buyNowButton: {
-        padding: '10px 20px',
-        backgroundColor: '#3498DB',
-        color: '#FFFFFF',
-        border: 'none',
-        borderRadius: '5px',
-        cursor: 'pointer',
-        fontSize: '16px',
-    },
-    modalTitle: {
-        fontSize: '22px',
-        fontWeight: 'bold',
-        color: '#2C3E50',
-        marginBottom: '10px',
-        textAlign: 'center',
-    },
-    modalSubtitle: {
-        fontSize: '14px',
-        color: '#7F8C8D',
-        marginBottom: '20px',
-        textAlign: 'center',
-    },
-    form: {
-        width: '100%',
-    },
-    formGroup: {
-        marginBottom: '20px',
-    },
-    label: {
-        display: 'block',
-        fontSize: '14px',
-        fontWeight: 'bold',
-        color: '#34495E',
-        marginBottom: '5px',
-    },
-    input: {
-        width: '100%',
-        padding: '10px',
-        fontSize: '14px',
-        border: '1px solid #BDC3C7',
-        borderRadius: '5px',
-        marginTop: '5px',
-    },
-    macInputContainer: {
-        display: 'flex',
-        alignItems: 'center',
-        marginTop: '5px',
-    },
-    macInput: {
-        flex: 1,
-        marginRight: '10px',
-    },
-    refreshButton: {
-        padding: '8px 12px',
-        backgroundColor: '#3498DB',
-        color: '#FFFFFF',
-        border: 'none',
-        borderRadius: '5px',
-        cursor: 'pointer',
-        fontSize: '18px',
-        fontWeight: 'bold',
-    },
-    inputError: {
-        borderColor: '#E74C3C',
-    },
-    errorText: {
-        color: '#E74C3C',
-        fontSize: '12px',
-        marginTop: '5px',
-    },
-    helpText: {
-        fontSize: '12px',
-        color: '#7F8C8D',
-        marginTop: '5px',
-    },
-    buttonGroup: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginTop: '25px',
-    },
-    cancelButton: {
-        padding: '10px 20px',
-        backgroundColor: '#95A5A6',
-        color: '#FFFFFF',
-        border: 'none',
-        borderRadius: '5px',
-        cursor: 'pointer',
-        fontSize: '14px',
-    },
-    submitButton: {
-        padding: '10px 20px',
-        backgroundColor: '#3498DB',
-        color: '#FFFFFF',
-        border: 'none',
-        borderRadius: '5px',
-        cursor: 'pointer',
-        fontSize: '14px',
-    },
-    successMessage: {
-        backgroundColor: '#D5F5E3',
-        color: '#27AE60',
-        padding: '10px',
-        borderRadius: '5px',
-        marginBottom: '20px',
-        textAlign: 'center',
-        fontWeight: 'bold',
-    },
-    mqttStatus: {
-        backgroundColor: '#F8F9FA',
-        color: '#007BFF',
-        padding: '10px',
-        borderRadius: '5px',
-        marginBottom: '20px',
-        textAlign: 'center',
-        fontSize: '14px',
-    },
-    macDetectedMessage: {
-        backgroundColor: '#D1ECFF',
-        color: '#0056B3',
-        padding: '10px',
-        borderRadius: '5px',
-        marginBottom: '20px',
-        textAlign: 'center',
-        fontWeight: 'bold',
-    },
-    autoDetectedText: {
-        color: '#27AE60',
-        fontSize: '12px',
-        marginTop: '5px',
-        fontStyle: 'italic',
-    }
-};

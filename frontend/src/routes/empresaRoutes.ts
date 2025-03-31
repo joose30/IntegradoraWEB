@@ -21,64 +21,40 @@ import { Pregunta } from '../models/empresaModel';
 
 const router = express.Router();
 
-// Ruta para obtener la última misión
+// Ruta para obtener todas las misiones
 router.get('/misions', async (req, res) => {
   try {
-    const misions = await Mision.find().sort({ _id: -1 }).limit(1).lean(); // Obtiene el último registro
-    if (misions.length > 0) {
-      const formattedMision = {
-        id: misions[0]._id,
-        contenido: misions[0].contenido,
-      };
-      res.json(formattedMision); // Devuelve un objeto
-    } else {
-      res.json(null); // Devuelve null si no hay datos
-    }
+    const misions = await Mision.find().lean(); // Obtiene todas las misiones
+    res.json(misions); // Devuelve un array con todas las misiones
   } catch (err) {
     res.status(500).json({ message: 'Error al obtener las misiones' });
   }
 });
 
-// Ruta para obtener la última visión
+// Ruta para obtener todas las visiones
 router.get('/visions', async (req, res) => {
   try {
-    const visions = await Vision.find().sort({ _id: -1 }).limit(1).lean();
-    if (visions.length > 0) {
-      const formattedVision = {
-        id: visions[0]._id,
-        contenido: visions[0].contenido,
-      };
-      res.json(formattedVision); // Devuelve un objeto
-    } else {
-      res.json(null); // Devuelve null si no hay datos
-    }
+    const visions = await Vision.find().lean(); // Obtiene todas las visiones
+    res.json(visions); // Devuelve un array con todas las visiones
   } catch (err) {
     res.status(500).json({ message: 'Error al obtener las visiones' });
   }
 });
 
-// Ruta para obtener el último valor
+// Ruta para obtener todos los valores
 router.get('/valors', async (req, res) => {
   try {
-    const valors = await Valor.find().sort({ _id: -1 }).limit(1).lean();
-    if (valors.length > 0) {
-      const formattedValor = {
-        id: valors[0]._id,
-        contenido: valors[0].contenido,
-      };
-      res.json(formattedValor); // Devuelve un objeto
-    } else {
-      res.json(null); // Devuelve null si no hay datos
-    }
+    const valors = await Valor.find().lean(); // Obtiene todos los valores
+    res.json(valors); // Devuelve un array con todos los valores
   } catch (err) {
     res.status(500).json({ message: 'Error al obtener los valores' });
   }
 });
 
-// Ruta para obtener todas las políticas (AHORA)
+// Ruta para obtener todas las políticas (ya está correcta)
 router.get('/politicas', async (req, res) => {
   try {
-    const politicas = await Politica.find().lean();
+    const politicas = await Politica.find().lean(); // Obtiene todas las políticas
     const formattedPoliticas = politicas.map(politica => ({
       id: politica._id,
       descripcion: politica.descripcion

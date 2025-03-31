@@ -1,74 +1,77 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import mqtt from 'mqtt';
-import axios from 'axios';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+"use client"
+
+import type React from "react"
+import { useState, useEffect, useRef } from "react"
+import mqtt from "mqtt"
+import axios from "axios"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faEye, faEyeSlash, faDoorOpen, faDoorClosed, faLock, faUnlock, faUser, faIdCard, faBell } from "@fortawesome/free-solid-svg-icons"
 
 interface Registro {
-  _id: string;
-  mensaje: string;
-  descripcion: string;
-  fecha: string;
-  tipo: string;
+  _id: string
+  mensaje: string
+  descripcion: string
+  fecha: string
+  tipo: string
 }
 
-// Componentes Widget internos
 const SystemStatusWidget: React.FC<{
-  connectionStatus: string;
-  doorStatus: string;
-  styles: any;
-}> = ({ connectionStatus, doorStatus, styles }) => (
-  <div style={{ ...styles.widget, backgroundColor: '#e3f2fd' }}>
-    <h3 style={{ ...styles.widgetTitle, color: '#1e88e5' }}>
-      <FontAwesomeIcon icon={faEye} style={{ ...styles.icon, color: '#1e88e5' }} />
-      Estado del Sistema
-    </h3>
-    <div style={styles.widgetContent}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-        <span style={{ fontWeight: 'bold' }}>Conexión:</span>
-        <span>{connectionStatus}</span>
+  connectionStatus: string
+  doorStatus: string
+}> = ({ connectionStatus, doorStatus }) => (
+  <div className="premium-section system-section">
+    <div className="section-header">
+      <div className="icon-container">
+        <FontAwesomeIcon icon={doorStatus === "Abierta" ? faDoorOpen : faDoorClosed} className="icon" />
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span style={{ fontWeight: 'bold' }}>Estado Puerta:</span>
-        <span>{doorStatus}</span>
+      <h3 className="section-title">Estado del Sistema</h3>
+    </div>
+    <div className="section-content">
+      <div className="status-item">
+        <span className="status-label">Conexión:</span>
+        <span className={`status-value ${connectionStatus === "Conectado" ? "connected" : "disconnected"}`}>
+          {connectionStatus}
+        </span>
+      </div>
+      <div className="status-item">
+        <span className="status-label">Estado Puerta:</span>
+        <span className={`status-value ${doorStatus === "Abierta" ? "open" : "closed"}`}>
+          {doorStatus}
+        </span>
       </div>
     </div>
   </div>
-);
+)
 
 const SecurityWidget: React.FC<{
-  magneticSensor: string;
-  pinStatus: string;
-  lastPinAttempt: string;
-  showPin: boolean;
-  setShowPin: React.Dispatch<React.SetStateAction<boolean>>;
-  styles: any;
-}> = ({ magneticSensor, pinStatus, lastPinAttempt, showPin, setShowPin, styles }) => (
-  <div style={{ ...styles.widget, backgroundColor: '#fbe9e7' }}>
-    <h3 style={{ ...styles.widgetTitle, color: '#d84315' }}>
-      <FontAwesomeIcon icon={faEyeSlash} style={{ ...styles.icon, color: '#d84315' }} />
-      Seguridad
-    </h3>
-    <div style={styles.widgetContent}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-        <span style={{ fontWeight: 'bold' }}>Sensor Magnético:</span>
-        <span>{magneticSensor}</span>
+  magneticSensor: string
+  pinStatus: string
+  lastPinAttempt: string
+  showPin: boolean
+  setShowPin: React.Dispatch<React.SetStateAction<boolean>>
+}> = ({ magneticSensor, pinStatus, lastPinAttempt, showPin, setShowPin }) => (
+  <div className="premium-section security-section">
+    <div className="section-header">
+      <div className="icon-container">
+        <FontAwesomeIcon icon={magneticSensor === "Abierto" ? faUnlock : faLock} className="icon" />
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontWeight: 'bold' }}>PIN:</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span>{showPin ? lastPinAttempt : '****'}</span>
+      <h3 className="section-title">Seguridad</h3>
+    </div>
+    <div className="section-content">
+      <div className="status-item">
+        <span className="status-label">Sensor Magnético:</span>
+        <span className={`status-value ${magneticSensor === "Abierto" ? "warning" : "safe"}`}>
+          {magneticSensor}
+        </span>
+      </div>
+      <div className="status-item">
+        <span className="status-label">PIN:</span>
+        <div className="pin-container">
+          <span>{showPin ? lastPinAttempt : ""}</span>
           <button
             onClick={() => setShowPin(!showPin)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: '#d84315',
-              fontSize: '16px'
-            }}
-            title={showPin ? 'Ocultar PIN' : 'Mostrar PIN'}
+            className="toggle-pin-button"
+            title={showPin ? "Ocultar PIN" : "Mostrar PIN"}
           >
             <FontAwesomeIcon icon={showPin ? faEyeSlash : faEye} />
           </button>
@@ -76,576 +79,898 @@ const SecurityWidget: React.FC<{
       </div>
     </div>
   </div>
-);
+)
 
 const SensorsWidget: React.FC<{
-  presenceStatus: string;
-  pirCount: number;
-  rfidStatus: string;
-  lastRFID: string;
-  styles: any;
-}> = ({ presenceStatus, pirCount, rfidStatus, lastRFID, styles }) => (
-  <div style={{ ...styles.widget, backgroundColor: '#e8f5e9' }}>
-    <h3 style={{ ...styles.widgetTitle, color: '#43a047' }}>
-      <FontAwesomeIcon icon={faEye} style={{ ...styles.icon, color: '#43a047' }} />
-      Sensores
-    </h3>
-    <div style={styles.widgetContent}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-        <span style={{ fontWeight: 'bold' }}>Presencia:</span>
-        <span>
+  presenceStatus: string
+  pirCount: number
+  rfidStatus: string
+  lastRFID: string
+}> = ({ presenceStatus, pirCount, rfidStatus, lastRFID }) => (
+  <div className="premium-section sensors-section">
+    <div className="section-header">
+      <div className="icon-container">
+        <FontAwesomeIcon icon={presenceStatus.includes("detectada") ? faUser : faIdCard} className="icon" />
+      </div>
+      <h3 className="section-title">Sensores</h3>
+    </div>
+    <div className="section-content">
+      <div className="status-item">
+        <span className="status-label">Presencia:</span>
+        <span className={`status-value ${presenceStatus.includes("detectada") ? "active" : "inactive"}`}>
           {presenceStatus} {pirCount > 0 && `(${pirCount})`}
         </span>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span style={{ fontWeight: 'bold' }}>RFID:</span>
-        <span>{rfidStatus}</span>
+      <div className="status-item">
+        <span className="status-label">RFID:</span>
+        <span className={`status-value ${rfidStatus.includes("detectada") ? "active" : "inactive"}`}>
+          {rfidStatus}
+        </span>
       </div>
     </div>
   </div>
-);
+)
 
 const EventLogWidget: React.FC<{
-  registros: Registro[];
-  loading: boolean;
-  error: string;
+  registros: Registro[]
+  loading: boolean
+  error: string
 }> = ({ registros, loading, error }) => (
-  <div style={{ 
-    maxHeight: '300px', 
-    overflowY: 'auto', 
-    marginTop: '20px', 
-    borderTop: '1px solid #eee', 
-    paddingTop: '20px' 
-  }}>
-    <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>
-      Últimos Eventos
-    </h3>
-    
-    {loading ? (
-      <div style={{ textAlign: 'center', padding: '20px' }}>Cargando registros...</div>
-    ) : error ? (
-      <div style={{ color: '#dc3545', textAlign: 'center', padding: '10px' }}>{error}</div>
-    ) : registros.length === 0 ? (
-      <div style={{ textAlign: 'center', padding: '10px', color: '#6c757d' }}>No hay registros disponibles</div>
-    ) : (
-      registros.slice(0, 5).map((registro) => (
-        <div key={registro._id} style={{
-          backgroundColor: '#f8f9fa',
-          borderRadius: '8px',
-          padding: '15px',
-          marginBottom: '10px',
-          textAlign: 'left',
-          borderLeft: registro.tipo === 'alarma' ? '4px solid #dc3545' : '4px solid #4CAF50'
-        }}>
-          <div style={{ fontSize: '14px', fontWeight: '600', color: '#333', marginBottom: '5px' }}>
-            {registro.mensaje}
+  <div className="premium-section logs-section">
+    <div className="section-header">
+      <div className="icon-container">
+        <FontAwesomeIcon icon={faBell} className="icon" />
+      </div>
+      <h3 className="section-title">Registro de Eventos</h3>
+    </div>
+    <div className="section-content">
+      {loading ? (
+        <div className="loading-container">
+          <div className="loading-dots">
+            <div className="dot"></div>
+            <div className="dot"></div>
+            <div className="dot"></div>
           </div>
-          <div style={{ fontSize: '12px', color: '#6c757d', marginBottom: '8px' }}>
-            {registro.descripcion}
-          </div>
-          <div style={{ fontSize: '11px', color: '#495057', textAlign: 'right' }}>
-            {new Date(registro.fecha).toLocaleString()}
-          </div>
+          <p>Cargando registros...</p>
         </div>
-      ))
-    )}
+      ) : error ? (
+        <div className="error-message">{error}</div>
+      ) : registros.length === 0 ? (
+        <div className="no-records">No hay registros disponibles</div>
+      ) : (
+        <div className="logs-container">
+          {registros.slice(0, 5).map((registro) => (
+            <div key={registro._id} className={`log-item ${registro.tipo === "alarma" ? "alarm" : "info"}`}>
+              <div className="log-message">{registro.mensaje}</div>
+              <div className="log-description">{registro.descripcion}</div>
+              <div className="log-date">{new Date(registro.fecha).toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   </div>
-);
+)
 
-const NotificationWidget: React.FC<{ 
-  message: string; 
-  type: 'info' | 'warning' | 'error'; 
+const NotificationWidget: React.FC<{
+  message: string
+  type: "info" | "warning" | "error"
 }> = ({ message, type }) => (
-  <div style={{
-    position: 'fixed',
-    top: '20px',
-    right: '20px',
-    backgroundColor: type === 'error' ? '#ff4444' : type === 'warning' ? '#ffbb33' : '#4CAF50',
-    color: 'white',
-    padding: '15px',
-    borderRadius: '5px',
-    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-    zIndex: 1000,
-    display: 'flex',
-    alignItems: 'center',
-    animation: 'fadeIn 0.3s'
-  }}>
+  <div className={`notification ${type}`}>
     {message}
-    {type === 'error' && <span style={{ marginLeft: '10px', fontSize: '20px' }}>⚠️</span>}
+    {type === "error" && <span className="notification-icon">⚠</span>}
   </div>
-);
+)
 
-const AlarmAlertWidget: React.FC<{ 
-  alarmEvent: Registro | null; 
+const AlarmAlertWidget: React.FC<{
+  alarmEvent: Registro | null
 }> = ({ alarmEvent }) => (
-  <div style={{
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    backgroundColor: '#ff4444',
-    color: 'white',
-    padding: '20px',
-    borderRadius: '10px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-    zIndex: 2000,
-    maxWidth: '80%',
-    textAlign: 'center',
-    animation: 'pulse 0.5s alternate infinite'
-  }}>
-    <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px' }}>¡ALARMA ACTIVADA!</div>
-    <div style={{ fontSize: '18px', marginBottom: '15px' }}>{alarmEvent?.mensaje}</div>
-    <div style={{ fontSize: '14px', opacity: 0.8 }}>
-      {alarmEvent?.descripcion}<br />
+  <div className="alarm-alert">
+    <div className="alarm-title">¡ALARMA ACTIVADA!</div>
+    <div className="alarm-message">{alarmEvent?.mensaje}</div>
+    <div className="alarm-description">
+      {alarmEvent?.descripcion}
+      <br />
       {alarmEvent?.fecha && new Date(alarmEvent.fecha).toLocaleString()}
     </div>
   </div>
-);
+)
+
+const MQTT_CONFIG = {
+  broker: "wss://cff146d73f214b82bb19d3ae4f6a3e7d.s1.eu.hivemq.cloud:8884/mqtt",
+  options: {
+    username: "PuertaIOT",
+    password: "1234abcD",
+    clientId: `web-client-${Math.random().toString(16).substr(2, 8)}`,
+    clean: true,
+    reconnectPeriod: 3000,
+  },
+  topics: {
+    command: "valoresPuerta/comandos",
+    doorStatus: "valoresPuerta/estadoPuerta",
+    rfid: "valoresPuerta/valorRFID",
+    pir: "valoresPuerta/conteoPIR",
+    alarm: "valoresPuerta/alarma",
+    magnetic: "valoresPuerta/sensorMagnetico",
+    pin: "valoresPuerta/PIN",
+    system: "valoresPuerta/status",
+  },
+}
 
 const PantallaPuerta: React.FC = () => {
-  // Estado del sistema
   const [systemState, setSystemState] = useState({
-    doorStatus: 'Cerrada',
-    connectionStatus: 'Conectando...',
-    presenceStatus: 'No detectado',
-    rfidStatus: 'Esperando tarjeta...',
+    doorStatus: "Cerrada",
+    connectionStatus: "Conectando...",
+    presenceStatus: "No detectado",
+    rfidStatus: "Esperando tarjeta...",
     pirCount: 0,
-    magneticSensor: 'Cerrado',
-    pinStatus: 'No ingresado',
+    magneticSensor: "Cerrado",
+    pinStatus: "No ingresado",
     loading: false,
-    error: '',
-    lastRFID: '',
+    error: "",
+    lastRFID: "",
     alarmHistory: [] as string[],
-    lastPinAttempt: '',
+    lastPinAttempt: "",
     lastUpdate: new Date().toISOString(),
-    lastAlarmState: 'Normal'
-  });
+    lastAlarmState: "Normal",
+  })
 
-  // Estado para mostrar/ocultar PIN
-  const [showPin, setShowPin] = useState(false);
+  const [showPin, setShowPin] = useState(false)
+  const [registros, setRegistros] = useState<Registro[]>([])
+  const [loadingRegistros, setLoadingRegistros] = useState(true)
+  const [errorRegistros, setErrorRegistros] = useState("")
+  const [showAlarmAlert, setShowAlarmAlert] = useState(false)
+  const [alarmEvent, setAlarmEvent] = useState<Registro | null>(null)
+  const [client, setClient] = useState<mqtt.MqttClient | null>(null)
+  const [notification, setNotification] = useState<{ message: string; type: "info" | "warning" | "error" } | null>(null)
 
-  // Estado para registros
-  const [registros, setRegistros] = useState<Registro[]>([]);
-  const [loadingRegistros, setLoadingRegistros] = useState(true);
-  const [errorRegistros, setErrorRegistros] = useState('');
-  const [showAlarmAlert, setShowAlarmAlert] = useState(false);
-  const [alarmEvent, setAlarmEvent] = useState<Registro | null>(null);
+  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const previousRegistrosRef = useRef<Registro[]>([])
 
-  // Configuración MQTT
-  const [client, setClient] = useState<mqtt.MqttClient | null>(null);
-  const [notification, setNotification] = useState<{message: string, type: 'info' | 'warning' | 'error'} | null>(null);
-  
-  // Refs
-  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const previousRegistrosRef = useRef<Registro[]>([]);
-
-  // Configuración MQTT
-  const MQTT_CONFIG = {
-    broker: 'wss://cff146d73f214b82bb19d3ae4f6a3e7d.s1.eu.hivemq.cloud:8884/mqtt',
-    options: {
-      username: 'PuertaIOT',
-      password: '1234abcD',
-      clientId: `web-client-${Math.random().toString(16).substr(2, 8)}`,
-      clean: true,
-      reconnectPeriod: 3000
-    },
-    topics: {
-      command: 'valoresPuerta/comandos',
-      doorStatus: 'valoresPuerta/estadoPuerta',
-      rfid: 'valoresPuerta/valorRFID',
-      pir: 'valoresPuerta/conteoPIR',
-      alarm: 'valoresPuerta/alarma',
-      magnetic: 'valoresPuerta/sensorMagnetico',
-      pin: 'valoresPuerta/PIN',
-      system: 'valoresPuerta/status'
-    }
-  };
-
-  // Función para obtener registros desde la API
   const fetchRegistros = async () => {
     try {
-      setLoadingRegistros(true);
-      setErrorRegistros('');
-      
-      // Intenta con ambas rutas posibles para mayor compatibilidad
-      const endpoints = ['/api/registros/ultimos', '/api/registros/get'];
-      let response;
-      
+      setLoadingRegistros(true)
+      setErrorRegistros("")
+
+      const endpoints = ["/api/registros/ultimos", "/api/registros/get"]
+      let response
+
       for (const endpoint of endpoints) {
         try {
-          response = await axios.get<Registro[]>(`http://localhost:8082${endpoint}`);
-          if (response.status === 200) break;
+          response = await axios.get<Registro[]>(`http://localhost:8082${endpoint}`)
+          if (response.status === 200) break
         } catch (err) {
-          console.warn(`Error con ${endpoint}:`, err);
+          console.warn(`Error con ${endpoint}:`, err)
         }
       }
 
       if (!response) {
-        throw new Error('No se pudo obtener registros de ningún endpoint');
+        throw new Error("No se pudo obtener registros de ningún endpoint")
       }
 
-      // Verificar si hay nuevas alarmas
       const newAlarms = response.data.filter(
-        reg => reg.tipo === 'alarma' && 
-        !previousRegistrosRef.current.some(
-          prevReg => prevReg._id === reg._id
-        )
-      );
+        (reg) =>
+          reg.tipo === "alarma" &&
+          !previousRegistrosRef.current.some((prevReg) => prevReg._id === reg._id),
+      )
 
       if (newAlarms.length > 0) {
-        setAlarmEvent(newAlarms[0]);
-        setShowAlarmAlert(true);
-        setTimeout(() => setShowAlarmAlert(false), 5000);
+        setAlarmEvent(newAlarms[0])
+        setShowAlarmAlert(true)
+        setTimeout(() => setShowAlarmAlert(false), 5000)
       }
 
-      setRegistros(response.data);
-      previousRegistrosRef.current = response.data;
-
+      setRegistros(response.data)
+      previousRegistrosRef.current = response.data
     } catch (err: any) {
-      console.error("Error al cargar registros:", err);
-      setErrorRegistros(err.message || 'Error al cargar registros');
+      console.error("Error al cargar registros:", err)
+      setErrorRegistros(err.message || "Error al cargar registros")
     } finally {
-      setLoadingRegistros(false);
+      setLoadingRegistros(false)
     }
-  };
+  }
 
-  // Mostrar notificación
-  const showNotification = (message: string, type: 'info' | 'warning' | 'error', duration = 3000) => {
+  const showNotification = (message: string, type: "info" | "warning" | "error", duration = 3000) => {
     if (notificationTimeoutRef.current) {
-      clearTimeout(notificationTimeoutRef.current);
+      clearTimeout(notificationTimeoutRef.current)
     }
-    
-    setNotification({ message, type });
+
+    setNotification({ message, type })
     notificationTimeoutRef.current = setTimeout(() => {
-      setNotification(null);
-    }, duration);
-  };
+      setNotification(null)
+    }, duration)
+  }
 
-  // Manejar acciones de la puerta
-  const handleDoorAction = async (action: 'abrir' | 'cerrar') => {
-    if (!client || systemState.loading) return;
+  const handleDoorAction = async (action: "abrir" | "cerrar") => {
+    if (!client || systemState.loading) return
 
-    setSystemState(prev => ({ ...prev, loading: true, error: '' }));
+    setSystemState((prev) => ({ ...prev, loading: true, error: "" }))
 
     try {
       await new Promise<void>((resolve, reject) => {
-        client.publish(
-          MQTT_CONFIG.topics.command,
-          action,
-          { qos: 1 },
-          (err) => err ? reject(err) : resolve()
-        );
-      });
+        client.publish(MQTT_CONFIG.topics.command, action, { qos: 1 }, (err) => (err ? reject(err) : resolve()))
+      })
 
-      setSystemState(prev => ({
-        ...prev,
-        loading: false
-      }));
-
-    } catch (err: any) {
-      setSystemState(prev => ({
+      setSystemState((prev) => ({
         ...prev,
         loading: false,
-        error: 'Error al enviar comando'
-      }));
-      showNotification('Error al enviar comando', 'error');
+      }))
+    } catch (err: any) {
+      setSystemState((prev) => ({
+        ...prev,
+        loading: false,
+        error: "Error al enviar comando",
+      }))
+      showNotification("Error al enviar comando", "error")
     }
-  };
+  }
 
-  // Configuración MQTT al montar el componente
   useEffect(() => {
-    const mqttClient = mqtt.connect(MQTT_CONFIG.broker, MQTT_CONFIG.options);
+    const mqttClient = mqtt.connect(MQTT_CONFIG.broker, MQTT_CONFIG.options)
 
-    mqttClient.on('connect', () => {
-      setSystemState(prev => ({ ...prev, connectionStatus: 'Conectado', error: '' }));
-      
-      // Suscripción a topics
-      Object.values(MQTT_CONFIG.topics).forEach(topic => {
-        mqttClient.subscribe(topic, { qos: 1 });
-      });
-    });
+    mqttClient.on("connect", () => {
+      setSystemState((prev) => ({ ...prev, connectionStatus: "Conectado", error: "" }))
 
-    mqttClient.on('message', (topic, message) => {
-      const msg = message.toString().trim();
-      if (!msg) return;
+      Object.values(MQTT_CONFIG.topics).forEach((topic) => {
+        mqttClient.subscribe(topic, { qos: 1 })
+      })
+    })
 
-      const now = new Date();
+    mqttClient.on("message", (topic, message) => {
+      const msg = message.toString().trim()
+      if (!msg) return
+
+      const now = new Date()
       const updateState = (updates: Partial<typeof systemState>) => {
-        setSystemState(prev => ({
+        setSystemState((prev) => ({
           ...prev,
           ...updates,
-          lastUpdate: now.toISOString()
-        }));
-      };
+          lastUpdate: now.toISOString(),
+        }))
+      }
 
       try {
         switch (topic) {
           case MQTT_CONFIG.topics.doorStatus:
-            const newStatus = msg === 'open' ? 'Abierta' : 'Cerrada';
-            updateState({ doorStatus: newStatus });
-            break;
-            
+            const newStatus = msg === "open" ? "Abierta" : "Cerrada"
+            updateState({ doorStatus: newStatus })
+            break
+
           case MQTT_CONFIG.topics.rfid:
-            const rfid = msg || 'Desconocido';
+            const rfid = msg || "Desconocido"
             updateState({
               rfidStatus: `Tarjeta detectada: ${rfid}`,
-              lastRFID: rfid
-            });
-            break;
-            
+              lastRFID: rfid,
+            })
+            break
+
           case MQTT_CONFIG.topics.pir:
-            const count = parseInt(msg) || 0;
-            const presence = count > 0 ? 'Presencia detectada' : 'No detectado';
+            const count = Number.parseInt(msg) || 0
+            const presence = count > 0 ? "Presencia detectada" : "No detectado"
             updateState({
               pirCount: count,
-              presenceStatus: presence
-            });
-            break;
-            
+              presenceStatus: presence,
+            })
+            break
+
           case MQTT_CONFIG.topics.alarm:
-            const alarmState = msg === 'activada' ? 'ALARMA ACTIVADA!' : 'Normal';
-            
+            const alarmState = msg === "activada" ? "ALARMA ACTIVADA!" : "Normal"
+
             if (systemState.lastAlarmState !== alarmState) {
               updateState({
-                lastAlarmState: alarmState
-              });
+                lastAlarmState: alarmState,
+              })
             }
-            break;
-            
+            break
+
           case MQTT_CONFIG.topics.magnetic:
-            const sensorState = msg === '1' ? 'Abierto' : 'Cerrado';
-            updateState({ magneticSensor: sensorState });
-            break;
-            
+            const sensorState = msg === "1" ? "Abierto" : "Cerrado"
+            updateState({ magneticSensor: sensorState })
+            break
+
           case MQTT_CONFIG.topics.pin:
             updateState({
-              pinStatus: msg ? 'PIN ingresado: ****' : 'No ingresado',
-              lastPinAttempt: msg
-            });
-            break;
-            
+              pinStatus: msg ? "PIN ingresado: ****" : "No ingresado",
+              lastPinAttempt: msg,
+            })
+            break
+
           case MQTT_CONFIG.topics.system:
             updateState({
-              connectionStatus: msg === 'online' ? 'Conectado' : 'Desconectado'
-            });
-            break;
+              connectionStatus: msg === "online" ? "Conectado" : "Desconectado",
+            })
+            break
         }
       } catch (error) {
-        console.error(`Error procesando mensaje de ${topic}:`, error);
+        console.error(`Error procesando mensaje de ${topic}:`, error)
       }
-    });
+    })
 
-    mqttClient.on('error', (err) => {
-      setSystemState(prev => ({
+    mqttClient.on("error", (err) => {
+      setSystemState((prev) => ({
         ...prev,
-        connectionStatus: 'Error de conexión',
-        error: err.message
-      }));
-      showNotification(`Error de conexión: ${err.message}`, 'error');
-    });
+        connectionStatus: "Error de conexión",
+        error: err.message,
+      }))
+      showNotification(`Error de conexión: ${err.message}`, "error")
+    })
 
-    setClient(mqttClient);
+    setClient(mqttClient)
 
-    // Cargar registros iniciales y configurar intervalo
-    fetchRegistros();
-    const interval = setInterval(fetchRegistros, 15000);
+    fetchRegistros()
+    const interval = setInterval(fetchRegistros, 15000)
 
     return () => {
-      if (mqttClient.connected) mqttClient.end();
-      clearInterval(interval);
-    };
-  }, []);
-
-  // Estilos
-  const styles = {
-    container: {
-      display: 'flex',
-      flexDirection: 'column' as const,
-      alignItems: 'center',
-      minHeight: '100vh',
-      backgroundColor: '#f5f5f5',
-      padding: '20px',
-      fontFamily: 'Arial, sans-serif'
-    },
-    titleCard: {
-      backgroundColor: '#fff',
-      padding: '20px',
-      borderRadius: '10px',
-      boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-      width: '100%',
-      maxWidth: '800px',
-      textAlign: 'center' as const,
-      marginBottom: '20px'
-    },
-    widgetsContainer: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-      gap: '20px',
-      width: '100%',
-      maxWidth: '1200px'
-    },
-    widget: {
-      padding: '20px',
-      borderRadius: '15px',
-      boxShadow: '0 6px 12px rgba(0,0,0,0.1)',
-      border: '1px solid #ddd',
-      transition: 'transform 0.3s, box-shadow 0.3s',
-      ':hover': {
-        transform: 'translateY(-5px)',
-        boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
-      }
-    },
-    widgetTitle: {
-      fontSize: '18px',
-      fontWeight: 'bold',
-      marginBottom: '15px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px'
-    },
-    widgetContent: {
-      fontSize: '14px',
-      color: '#555',
-      lineHeight: '1.6'
-    },
-    controlsContainer: {
-      marginTop: '20px',
-      textAlign: 'center' as const
-    },
-    button: {
-      padding: '12px 24px',
-      backgroundColor: '#4CAF50',
-      color: 'white',
-      border: 'none',
-      borderRadius: '5px',
-      cursor: 'pointer',
-      fontSize: '16px',
-      transition: 'all 0.3s',
-      ':hover': {
-        backgroundColor: '#45a049'
-      }
-    },
-    disabledButton: {
-      padding: '12px 24px',
-      backgroundColor: '#cccccc',
-      color: '#666666',
-      border: 'none',
-      borderRadius: '5px',
-      cursor: 'not-allowed',
-      fontSize: '16px'
-    },
-    lastUpdateContainer: {
-      marginTop: '20px',
-      textAlign: 'center' as const
-    },
-    lastUpdate: {
-      fontSize: '12px',
-      color: '#999'
-    },
-    icon: {
-      fontSize: '20px'
+      if (mqttClient.connected) mqttClient.end()
+      clearInterval(interval)
     }
-  };
+  }, [])
 
   return (
-    <div style={styles.container}>
-      {/* Notificación flotante */}
-      {notification && (
-        <NotificationWidget 
-          message={notification.message} 
-          type={notification.type} 
-        />
-      )}
+    <div className="premium-container">
+      <div className="particle-background"></div>
 
-      {/* Alerta de alarma */}
-      {showAlarmAlert && alarmEvent && (
-        <AlarmAlertWidget 
-          alarmEvent={alarmEvent}
-        />
-      )}
+      {notification && <NotificationWidget message={notification.message} type={notification.type} />}
+      {showAlarmAlert && alarmEvent && <AlarmAlertWidget alarmEvent={alarmEvent} />}
 
-      {/* Título principal */}
-      <div style={styles.titleCard}>
-        <h2 style={{ marginBottom: '20px', color: '#333' }}>Control de Puerta IoT</h2>
-      </div>
-
-      {/* Contenedor de widgets */}
-      <div style={styles.widgetsContainer}>
-        {/* Widget de Estado del Sistema */}
-        <div style={styles.widget}>
-          <SystemStatusWidget 
-            connectionStatus={systemState.connectionStatus}
-            doorStatus={systemState.doorStatus}
-            styles={styles}
-          />
+      <div className="premium-card">
+        <div className="header-container">
+          <h1 className="premium-title">
+            <span className="title-highlight">Control</span> de Puerta IoT
+          </h1>
+          <div className="title-decoration"></div>
         </div>
 
-        {/* Widget de Seguridad */}
-        <div style={styles.widget}>
-          <SecurityWidget 
+        <div className="widgets-grid">
+          <SystemStatusWidget
+            connectionStatus={systemState.connectionStatus}
+            doorStatus={systemState.doorStatus}
+          />
+
+          <SecurityWidget
             magneticSensor={systemState.magneticSensor}
             pinStatus={systemState.pinStatus}
             lastPinAttempt={systemState.lastPinAttempt}
             showPin={showPin}
             setShowPin={setShowPin}
-            styles={styles}
           />
-        </div>
 
-        {/* Widget de Sensores */}
-        <div style={styles.widget}>
-          <SensorsWidget 
+          <SensorsWidget
             presenceStatus={systemState.presenceStatus}
             pirCount={systemState.pirCount}
             rfidStatus={systemState.rfidStatus}
             lastRFID={systemState.lastRFID}
-            styles={styles}
           />
+
+          <EventLogWidget registros={registros} loading={loadingRegistros} error={errorRegistros} />
         </div>
 
-        {/* Widget de Registros */}
-        <div style={styles.widget}>
-          <EventLogWidget 
-            registros={registros}
-            loading={loadingRegistros}
-            error={errorRegistros}
-          />
+        <div className="controls-container">
+          <button
+            onClick={() => handleDoorAction("abrir")}
+            disabled={systemState.doorStatus === "Abierta" || systemState.loading}
+            className={`premium-button ${systemState.doorStatus === "Abierta" || systemState.loading ? "disabled" : ""}`}
+          >
+            {systemState.loading ? (
+              <div className="loading-dots">
+                <div className="dot"></div>
+                <div className="dot"></div>
+                <div className="dot"></div>
+              </div>
+            ) : (
+              <>
+                <FontAwesomeIcon icon={faDoorOpen} className="button-icon" />
+                Abrir Puerta
+              </>
+            )}
+          </button>
         </div>
-      </div>
 
-      {/* Controles */}
-      <div style={styles.controlsContainer}>
-        <button
-          onClick={() => handleDoorAction('abrir')}
-          disabled={systemState.doorStatus === 'Abierta' || systemState.loading}
-          style={systemState.doorStatus === 'Abierta' ? styles.disabledButton : styles.button}
-        >
-          {systemState.loading ? 'Enviando...' : 'Abrir Puerta'}
-        </button>
-      </div>
-
-      {/* Última actualización */}
-      <div style={styles.lastUpdateContainer}>
-        <div style={styles.lastUpdate}>
+        <div className="last-update">
           Última actualización: {new Date(systemState.lastUpdate).toLocaleTimeString()}
         </div>
       </div>
 
-      {/* Estilos globales */}
-      <style>
-        {`
-          @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          @keyframes pulse {
-            from { transform: translate(-50%, -50%) scale(1); }
-            to { transform: translate(-50%, -50%) scale(1.05); }
-          }
-        `}
-      </style>
-    </div>
-  );
-};
+      <style>{`
+        .premium-container {
+          min-height: 100vh;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 2rem;
+          position: relative;
+          overflow: hidden;
+          font-family: 'Montserrat', sans-serif;
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+          color: #fff;
+        }
 
-export default PantallaPuerta;
+        .particle-background {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+          background-size: 2px 2px;
+          opacity: 0.5;
+          z-index: 0;
+        }
+
+        .premium-card {
+          position: relative;
+          width: 100%;
+          max-width: 1200px;
+          background: rgba(26, 26, 46, 0.8);
+          backdrop-filter: blur(10px);
+          border-radius: 20px;
+          padding: 3rem;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          z-index: 1;
+          overflow: hidden;
+        }
+
+        .premium-card::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: radial-gradient(circle, rgba(92, 107, 192, 0.1) 0%, transparent 70%);
+          animation: rotate 20s linear infinite;
+          z-index: -1;
+        }
+
+        .header-container {
+          text-align: center;
+          margin-bottom: 3rem;
+          position: relative;
+        }
+
+        .premium-title {
+          font-size: 2.5rem;
+          font-weight: 700;
+          margin-bottom: 1rem;
+          background: linear-gradient(90deg, #fff 0%, #a5b4fc 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          position: relative;
+          display: inline-block;
+        }
+
+        .title-highlight {
+          font-weight: 800;
+          text-shadow: 0 0 10px rgba(165, 180, 252, 0.5);
+        }
+
+        .title-decoration {
+          height: 4px;
+          width: 100px;
+          background: linear-gradient(90deg, #5c6bc0, #3949ab);
+          margin: 0 auto;
+          border-radius: 2px;
+          box-shadow: 0 0 10px rgba(92, 107, 192, 0.5);
+        }
+
+        .widgets-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 2rem;
+        }
+
+        .premium-section {
+          background: rgba(30, 30, 60, 0.6);
+          border-radius: 15px;
+          padding: 1.5rem;
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .premium-section:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .system-section {
+          border-top: 3px solid #5c6bc0;
+        }
+
+        .security-section {
+          border-top: 3px solid #3949ab;
+        }
+
+        .sensors-section {
+          border-top: 3px solid #8e24aa;
+        }
+
+        .logs-section {
+          border-top: 3px solid #26a69a;
+        }
+
+        .section-header {
+          display: flex;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+
+        .icon-container {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-right: 1rem;
+        }
+
+        .system-section .icon-container {
+          background: rgba(92, 107, 192, 0.2);
+        }
+
+        .security-section .icon-container {
+          background: rgba(57, 73, 171, 0.2);
+        }
+
+        .sensors-section .icon-container {
+          background: rgba(142, 36, 170, 0.2);
+        }
+
+        .logs-section .icon-container {
+          background: rgba(38, 166, 154, 0.2);
+        }
+
+        .icon {
+          font-size: 1.25rem;
+        }
+
+        .system-section .icon {
+          color: #5c6bc0;
+        }
+
+        .security-section .icon {
+          color: #3949ab;
+        }
+
+        .sensors-section .icon {
+          color: #8e24aa;
+        }
+
+        .logs-section .icon {
+          color: #26a69a;
+        }
+
+        .section-title {
+          font-size: 1.25rem;
+          font-weight: 600;
+          margin: 0;
+          flex-grow: 1;
+          text-align: left;
+        }
+
+        .section-content {
+          margin-top: 1rem;
+          padding-top: 1rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-item {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 0.75rem;
+          font-size: 0.95rem;
+        }
+
+        .status-label {
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        .status-value {
+          color: rgba(255, 255, 255, 0.7);
+        }
+
+        .status-value.connected {
+          color: #10b981;
+        }
+
+        .status-value.disconnected {
+          color: #ef4444;
+        }
+
+        .status-value.open {
+          color: #f59e0b;
+        }
+
+        .status-value.closed {
+          color: #10b981;
+        }
+
+        .status-value.warning {
+          color: #f59e0b;
+        }
+
+        .status-value.safe {
+          color: #10b981;
+        }
+
+        .status-value.active {
+          color: #3b82f6;
+        }
+
+        .status-value.inactive {
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        .pin-container {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .toggle-pin-button {
+          background: none;
+          border: none;
+          color: #a5b4fc;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+
+        .toggle-pin-button:hover {
+          color: #818cf8;
+        }
+
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+          color: rgba(255, 255, 255, 0.7);
+        }
+
+        .loading-dots {
+          display: flex;
+          margin-bottom: 1rem;
+        }
+
+        .loading-dots .dot {
+          width: 10px;
+          height: 10px;
+          margin: 0 5px;
+          border-radius: 50%;
+          animation: bounce 1.5s infinite ease-in-out;
+        }
+
+        .loading-dots .dot:nth-child(1) {
+          background: #5c6bc0;
+          animation-delay: 0s;
+        }
+
+        .loading-dots .dot:nth-child(2) {
+          background: #3949ab;
+          animation-delay: 0.2s;
+        }
+
+        .loading-dots .dot:nth-child(3) {
+          background: #8e24aa;
+          animation-delay: 0.4s;
+        }
+
+        .error-message {
+          color: #ef4444;
+          text-align: center;
+          padding: 1rem;
+        }
+
+        .no-records {
+          text-align: center;
+          padding: 1rem;
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        .logs-container {
+          max-height: 300px;
+          overflow-y: auto;
+        }
+
+        .log-item {
+          padding: 1rem;
+          margin-bottom: 0.75rem;
+          border-radius: 8px;
+          border-left: 4px solid;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          animation: fadeIn 0.5s ease-out;
+        }
+
+        .log-item.alarm {
+          border-left-color: #ef4444;
+        }
+
+        .log-item.info {
+          border-left-color: #10b981;
+        }
+
+        .log-message {
+          font-weight: 600;
+          margin-bottom: 0.25rem;
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        .log-description {
+          font-size: 0.85rem;
+          margin-bottom: 0.5rem;
+          color: rgba(255, 255, 255, 0.7);
+        }
+
+        .log-date {
+          font-size: 0.75rem;
+          text-align: right;
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        .controls-container {
+          margin-top: 2rem;
+          text-align: center;
+        }
+
+        .premium-button {
+          padding: 1rem 2rem;
+          background: linear-gradient(135deg, #5c6bc0, #3949ab);
+          color: white;
+          border: none;
+          border-radius: 10px;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s;
+          box-shadow: 0 4px 15px rgba(92, 107, 192, 0.3);
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .premium-button:hover:not(.disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(92, 107, 192, 0.4);
+        }
+
+        .premium-button.disabled {
+          background: rgba(204, 204, 204, 0.2);
+          color: rgba(255, 255, 255, 0.4);
+          cursor: not-allowed;
+        }
+
+        .button-icon {
+          font-size: 1rem;
+        }
+
+        .last-update {
+          margin-top: 2rem;
+          text-align: center;
+          font-size: 0.85rem;
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        .notification {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          padding: 15px 20px;
+          border-radius: 10px;
+          box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          animation: fadeIn 0.3s;
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .notification.error {
+          background: rgba(239, 68, 68, 0.9);
+        }
+
+        .notification.warning {
+          background: rgba(245, 158, 11, 0.9);
+        }
+
+        .notification.info {
+          background: rgba(16, 185, 129, 0.9);
+        }
+
+        .notification-icon {
+          margin-left: 10px;
+          font-size: 20px;
+        }
+
+        .alarm-alert {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          padding: 30px;
+          border-radius: 15px;
+          box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+          z-index: 2000;
+          max-width: 80%;
+          text-align: center;
+          animation: pulse 0.5s alternate infinite;
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: rgba(239, 68, 68, 0.95);
+        }
+
+        .alarm-title {
+          font-size: 28px;
+          font-weight: bold;
+          margin-bottom: 15px;
+        }
+
+        .alarm-message {
+          font-size: 20px;
+          margin-bottom: 20px;
+        }
+
+        .alarm-description {
+          font-size: 16px;
+          opacity: 0.9;
+        }
+
+        @keyframes rotate {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+          from { transform: translate(-50%, -50%) scale(1); }
+          to { transform: translate(-50%, -50%) scale(1.05); }
+        }
+
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+
+        @media (max-width: 768px) {
+          .premium-card {
+            padding: 2rem;
+          }
+          
+          .premium-title {
+            font-size: 2rem;
+          }
+          
+          .widgets-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .premium-container {
+            padding: 1rem;
+          }
+          
+          .premium-card {
+            padding: 1.5rem;
+          }
+          
+          .premium-title {
+            font-size: 1.5rem;
+          }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+export default PantallaPuerta

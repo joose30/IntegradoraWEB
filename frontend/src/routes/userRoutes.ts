@@ -267,6 +267,26 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+router.put('/:id/update-pin', async (req, res) => {
+  const { id } = req.params;
+  const { devicePin } = req.body;
+
+  if (!devicePin || devicePin.length !== 4 || !/^\d+$/.test(devicePin)) {
+    return res.status(400).json({ message: 'El PIN debe ser de exactamente 4 dígitos.' });
+  }
+
+  try {
+    const user = await User.findByIdAndUpdate(id, { devicePin }, { new: true });
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+    res.status(200).json({ message: 'PIN actualizado correctamente.', user });
+  } catch (error) {
+    console.error('Error al actualizar el PIN:', error);
+    res.status(500).json({ message: 'Error al actualizar el PIN.' });
+  }
+});
+
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const users = await User.find(); // Obtén todos los usuarios
@@ -318,5 +338,26 @@ router.get("/questions", async (req, res) => {
 
 // Ruta para registrar la huella del usuario
 router.post('/registrar-huella', authMiddleware, registerFingerprint);
+
+// Ruta para actualizar el PIN de un usuario específico
+router.put('/api/users/:id/update-pin', async (req, res) => {
+  const { id } = req.params; // ID del usuario objetivo
+  const { devicePin } = req.body;
+
+  if (!devicePin || devicePin.length !== 4 || !/^\d+$/.test(devicePin)) {
+    return res.status(400).json({ message: 'El PIN debe ser de exactamente 4 dígitos.' });
+  }
+
+  try {
+    const user = await User.findByIdAndUpdate(id, { devicePin }, { new: true });
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+    res.status(200).json({ message: 'PIN actualizado correctamente.', user });
+  } catch (error) {
+    console.error('Error al actualizar el PIN:', error);
+    res.status(500).json({ message: 'Error al actualizar el PIN.' });
+  }
+});
 
 export default router;
