@@ -80,6 +80,7 @@ export default function ProductoDetail() {
             });
             
             mqttClient.on('message', (topic, message) => {
+                // Solo actualizar si se permite y no ha sido editado manualmente
                 if (topic === MQTT_CONFIG.topics.mac && allowMacUpdates && !isManuallyEdited) {
                     const macAddress = message.toString();
                     if (macAddress && macAddress.trim() !== '') {
@@ -89,16 +90,21 @@ export default function ProductoDetail() {
                         }));
                         setMacAddressReceived(true);
                         setMqttStatus('MAC detectada automáticamente');
+                        
+                        // Detener actualizaciones automáticas después de recibir la primera
                         setAllowMacUpdates(false);
                     }
                 }
             });
             
             mqttClient.on('error', (err) => {
-                console.error('Error MQTT:', err);
-                setMqttStatus('Error de conexión MQTT');
+                if (err.message !== 'client disconnecting') { // Ignorar el error de desconexión
+                    console.error('Error MQTT:', err);
+                    setMqttStatus('Error de conexión MQTT');
+                }
             });
             
+            // Limpiar la conexión al cerrar el modal
             return () => {
                 if (mqttClient) {
                     mqttClient.end();
@@ -130,25 +136,35 @@ export default function ProductoDetail() {
         alert('Producto agregado al carrito');
     };
 
+    // Función para manejar compra inmediata
     const handleBuyNow = () => {
+        // Verificar si el usuario está autenticado
         const token = localStorage.getItem('token');
         if (!token) {
             alert('Debes iniciar sesión para realizar una compra');
             navigate('/login', { state: { returnTo: location.pathname, product } });
             return;
         }
+        
+        // Abrir el modal para configurar el dispositivo
         setIsModalOpen(true);
     };
 
+    // Manejar cambios en los campos del formulario
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
+        
+        // Si es el campo MAC, marcar como editado manualmente
         if (name === 'macAddress') {
             setIsManuallyEdited(true);
         }
+        
         setDeviceData(prev => ({
             ...prev,
             [name]: value
         }));
+        
+        // Limpiar errores mientras el usuario escribe
         if (errors[name]) {
             setErrors({
                 ...errors,
@@ -157,10 +173,13 @@ export default function ProductoDetail() {
         }
     };
 
+    // Función para refrescar la dirección MAC
     const handleRefreshMac = () => {
         setAllowMacUpdates(true);
-        setIsManuallyEdited(false);
+        setIsManuallyEdited(false); // Resetear el estado de edición manual
         setMqttStatus('Buscando dispositivo nuevamente...');
+        
+        // Pequeño retraso para asegurar que el estado se actualice antes de volver a suscribirse
         setTimeout(() => {
             if (mqttClientRef.current) {
                 mqttClientRef.current.unsubscribe(MQTT_CONFIG.topics.mac);
@@ -169,41 +188,55 @@ export default function ProductoDetail() {
         }, 100);
     };
 
+    // Validar el formulario
     const validateForm = (): boolean => {
         const newErrors: {[key: string]: string} = {};
+        
         if (!deviceData.macAddress) {
             newErrors.macAddress = 'La dirección MAC es requerida';
         }
+        
         if (!deviceData.name) {
             newErrors.name = 'El nombre del dispositivo es requerido';
         }
+        
         if (!deviceData.devicePin) {
             newErrors.devicePin = 'El PIN es requerido';
         } else if (deviceData.devicePin.length !== 4 || !/^\d+$/.test(deviceData.devicePin)) {
             newErrors.devicePin = 'El PIN debe ser de exactamente 4 dígitos';
         }
+        
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
+    // Enviar datos del dispositivo al servidor
     const handleSubmitDevice = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!validateForm()) {
+            return;
+        }
+        
         setIsLoading(true);
         setSuccessMessage('');
+        
         try {
             const token = localStorage.getItem('token');
+            
             if (!token) {
                 alert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
                 setIsModalOpen(false);
                 navigate('/login', { state: { returnTo: location.pathname, product } });
                 return;
             }
-
-            const targetUserId = "67e8f3d75bee2811f9c13ee8"; // ID del usuario objetivo
-
-            const updateResponse = await axios.put(
-                `${API_BASE}/users/${targetUserId}/update-pin`,
-                { devicePin: deviceData.devicePin },
+            
+            console.log('Intentando registrar dispositivo con token:', token.substring(0, 15) + '...');
+            
+            // Registrar el dispositivo usando la API
+            const response = await axios.post(
+                `${API_BASE}/devices/register`,
+                deviceData,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -211,20 +244,63 @@ export default function ProductoDetail() {
                     }
                 }
             );
-
-            if (updateResponse.status === 200) {
+            
+            if (response.status === 201) {
+                console.log('Dispositivo registrado:', response.data);
                 setSuccessMessage('¡Dispositivo registrado exitosamente!');
+                
+                // Guardar localmente que el usuario tiene un dispositivo
+                localStorage.setItem('userHasDevice', 'true');
+                
+                try {
+                    // Registrar la compra del producto
+                    console.log('Intentando registrar compra para el producto:', product._id);
+                    await registerPurchase(token, product._id);
+                } catch (purchaseError) {
+                    console.error('Error específico al registrar la compra:', purchaseError);
+                    // No mostramos error al usuario para no interrumpir el flujo principal
+                }
+                
+                // Resetear formulario después del éxito
+                setDeviceData({
+                    macAddress: '',
+                    name: `Segurix ${product.name}`,
+                    devicePin: ''
+                });
+                
+                // Cerrar el modal después de 2 segundos
+                setTimeout(() => {
+                    setIsModalOpen(false);
+                    navigate('/dispositivo'); // Redirigir a la página de dispositivo
+                }, 2000);
             }
         } catch (error: any) {
             console.error('Error al registrar dispositivo:', error);
-            alert('Error al registrar dispositivo. Inténtalo de nuevo más tarde.');
+            
+            let errorMessage = 'Error al registrar dispositivo. Inténtalo de nuevo más tarde.';
+            
+            if (error.response?.status === 401) {
+                errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+                setTimeout(() => {
+                    setIsModalOpen(false);
+                    navigate('/login', { state: { returnTo: location.pathname, product } });
+                }, 1500);
+            } else if (error.response?.data?.message) {
+                errorMessage = `Error: ${error.response.data.message}`;
+            }
+            
+            alert(errorMessage);
         } finally {
             setIsLoading(false);
         }
     };
-
+    
+    // Función para registrar la compra de un producto
     const registerPurchase = async (token: string, productId: string) => {
         try {
+            console.log('Enviando solicitud de compra con token:', token.substring(0, 15) + '...');
+            console.log('Producto ID para la compra:', productId);
+            
             const response = await axios.post(
                 `${API_BASE}/purchases/register`,
                 { productId: productId },
@@ -235,14 +311,19 @@ export default function ProductoDetail() {
                     }
                 }
             );
+            
+            console.log('Compra registrada exitosamente:', response.data);
             return response.data;
         } catch (error: any) {
-            console.error('Error al registrar la compra:', error);
-            return {
-                error: true,
-                message: error.response?.data?.message || 'Error desconocido',
-                status: error.response?.status
-            };
+            // Manejar el error de forma silenciosa
+            if (error.response?.status === 404) {
+                console.warn('El endpoint para registrar la compra no se encontró. Verifica la ruta en el servidor.');
+            } else {
+                console.warn('Error al registrar la compra:', error.message);
+            }
+            
+            // Retornar un objeto vacío para evitar interrupciones en el flujo
+            return null;
         }
     };
 
@@ -253,7 +334,7 @@ export default function ProductoDetail() {
             <div className="premium-card">
                 <div className="header-container">
                     <h1 className="premium-title">
-                        <span className="title-highlight">{product.name}</span>
+                        <span className="title-highlight">Detalle de {product.name}</span>
                     </h1>
                     <div className="title-decoration"></div>
                 </div>
@@ -325,6 +406,7 @@ export default function ProductoDetail() {
                         </div>
                     )}
 
+                    {/* Mostrar estado de la conexión MQTT */}
                     {mqttStatus && !macAddressReceived && allowMacUpdates && (
                         <div className="mqtt-status">
                             {mqttStatus}

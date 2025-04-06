@@ -6,6 +6,7 @@ import mqtt from "mqtt"
 import axios from "axios"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faEye, faEyeSlash, faDoorOpen, faDoorClosed, faLock, faUnlock, faUser, faIdCard, faBell } from "@fortawesome/free-solid-svg-icons"
+import { useNavigate } from "react-router-dom"
 
 interface Registro {
   _id: string
@@ -223,6 +224,10 @@ const PantallaPuerta: React.FC = () => {
   const [alarmEvent, setAlarmEvent] = useState<Registro | null>(null)
   const [client, setClient] = useState<mqtt.MqttClient | null>(null)
   const [notification, setNotification] = useState<{ message: string; type: "info" | "warning" | "error" } | null>(null)
+  const [devices, setDevices] = useState([])
+  const [loadingDevices, setLoadingDevices] = useState(true)
+  const [errorDevices, setErrorDevices] = useState("")
+  const navigate = useNavigate()
 
   const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const previousRegistrosRef = useRef<Registro[]>([])
@@ -406,6 +411,30 @@ const PantallaPuerta: React.FC = () => {
     }
   }, [])
 
+  useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        setLoadingDevices(true);
+        setErrorDevices("");
+
+        const response = await axios.get("http://localhost:8082/api/devices/user", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`, // Asegúrate de enviar el token de autenticación
+          },
+        });
+
+        setDevices(response.data);
+      } catch (error: any) {
+        console.error("Error al cargar dispositivos:", error);
+        setErrorDevices(error.message || "Error al cargar dispositivos");
+      } finally {
+        setLoadingDevices(false);
+      }
+    };
+
+    fetchDevices();
+  }, []);
+
   return (
     <div className="premium-container">
       <div className="particle-background"></div>
@@ -416,55 +445,85 @@ const PantallaPuerta: React.FC = () => {
       <div className="premium-card">
         <div className="header-container">
           <h1 className="premium-title">
-            <span className="title-highlight">Control</span> de Puerta IoT
+            <span className="title-highlight">Control de Puerta IoT</span>
           </h1>
           <div className="title-decoration"></div>
         </div>
 
-        <div className="widgets-grid">
-          <SystemStatusWidget
-            connectionStatus={systemState.connectionStatus}
-            doorStatus={systemState.doorStatus}
-          />
+        {loadingDevices ? (
+          <p className="loading-message">Cargando dispositivos...</p>
+        ) : errorDevices ? (
+          <p className="error-message">{errorDevices}</p>
+        ) : devices.length === 0 ? (
+          <div className="no-devices-container">
+            <p className="no-devices-message">No tienes dispositivos registrados.</p>
+            <button
+              className="catalog-button styled-button"
+              onClick={() => navigate("/productos")}
+            >
+              Ir al Catálogo de Productos
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="devices-container">
+              <h2>Dispositivos Registrados</h2>
+              <ul>
+                {devices.map((device: any) => (
+                  <li key={device._id}>
+                    <strong>Nombre:</strong> {device.name} <br />
+                    <strong>MAC Address:</strong> {device.macAddress}
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          <SecurityWidget
-            magneticSensor={systemState.magneticSensor}
-            pinStatus={systemState.pinStatus}
-            lastPinAttempt={systemState.lastPinAttempt}
-            showPin={showPin}
-            setShowPin={setShowPin}
-          />
+            <div className="widgets-grid">
+              <SystemStatusWidget
+                connectionStatus={systemState.connectionStatus}
+                doorStatus={systemState.doorStatus}
+              />
 
-          <SensorsWidget
-            presenceStatus={systemState.presenceStatus}
-            pirCount={systemState.pirCount}
-            rfidStatus={systemState.rfidStatus}
-            lastRFID={systemState.lastRFID}
-          />
+              <SecurityWidget
+                magneticSensor={systemState.magneticSensor}
+                pinStatus={systemState.pinStatus}
+                lastPinAttempt={systemState.lastPinAttempt}
+                showPin={showPin}
+                setShowPin={setShowPin}
+              />
 
-          <EventLogWidget registros={registros} loading={loadingRegistros} error={errorRegistros} />
-        </div>
+              <SensorsWidget
+                presenceStatus={systemState.presenceStatus}
+                pirCount={systemState.pirCount}
+                rfidStatus={systemState.rfidStatus}
+                lastRFID={systemState.lastRFID}
+              />
 
-        <div className="controls-container">
-          <button
-            onClick={() => handleDoorAction("abrir")}
-            disabled={systemState.doorStatus === "Abierta" || systemState.loading}
-            className={`premium-button ${systemState.doorStatus === "Abierta" || systemState.loading ? "disabled" : ""}`}
-          >
-            {systemState.loading ? (
-              <div className="loading-dots">
-                <div className="dot"></div>
-                <div className="dot"></div>
-                <div className="dot"></div>
-              </div>
-            ) : (
-              <>
-                <FontAwesomeIcon icon={faDoorOpen} className="button-icon" />
-                Abrir Puerta
-              </>
-            )}
-          </button>
-        </div>
+              <EventLogWidget registros={registros} loading={loadingRegistros} error={errorRegistros} />
+            </div>
+
+            <div className="controls-container">
+              <button
+                onClick={() => handleDoorAction("abrir")}
+                disabled={systemState.doorStatus === "Abierta" || systemState.loading}
+                className={`premium-button ${systemState.doorStatus === "Abierta" || systemState.loading ? "disabled" : ""}`}
+              >
+                {systemState.loading ? (
+                  <div className="loading-dots">
+                    <div className="dot"></div>
+                    <div className="dot"></div>
+                    <div className="dot"></div>
+                  </div>
+                ) : (
+                  <>
+                    <FontAwesomeIcon icon={faDoorOpen} className="button-icon" />
+                    Abrir Puerta
+                  </>
+                )}
+              </button>
+            </div>
+          </>
+        )}
 
         <div className="last-update">
           Última actualización: {new Date(systemState.lastUpdate).toLocaleTimeString()}
@@ -919,6 +978,41 @@ const PantallaPuerta: React.FC = () => {
         .alarm-description {
           font-size: 16px;
           opacity: 0.9;
+        }
+
+        .no-devices-container {
+          text-align: center;
+          padding: 2rem;
+          background: rgba(30, 30, 60, 0.6);
+          border-radius: 15px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+          margin: 2rem 0;
+        }
+
+        .no-devices-message {
+          font-size: 1.25rem;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.9);
+          margin-bottom: 1rem;
+        }
+
+        .catalog-button.styled-button {
+          padding: 1rem 2rem;
+          background: linear-gradient(135deg, #5c6bc0, #3949ab);
+          color: white;
+          border: none;
+          border-radius: 10px;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s;
+          box-shadow: 0 4px 15px rgba(92, 107, 192, 0.3);
+        }
+
+        .catalog-button.styled-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(92, 107, 192, 0.4);
         }
 
         @keyframes rotate {
