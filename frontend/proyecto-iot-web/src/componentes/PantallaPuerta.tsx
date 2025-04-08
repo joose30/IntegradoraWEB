@@ -16,6 +16,22 @@ interface Registro {
   tipo: string
 }
 
+const DoorStatusIcon: React.FC<{
+  doorStatus: string
+}> = ({ doorStatus }) => (
+  <div className="door-status-container">
+    <div className="door-icon-wrapper">
+      <FontAwesomeIcon
+        icon={doorStatus === "Abierta" ? faDoorOpen : faDoorClosed}
+        className={`door-status-icon ${doorStatus === "Abierta" ? "open" : "closed"}`}
+      />
+    </div>
+    <div className="door-status-text">
+      {doorStatus === "Abierta" ? "Puerta Abierta" : "Puerta Cerrada"}
+    </div>
+  </div>
+)
+
 const SystemStatusWidget: React.FC<{
   connectionStatus: string
   doorStatus: string
@@ -117,7 +133,7 @@ const EventLogWidget: React.FC<{
   loading: boolean
   error: string
 }> = ({ registros, loading, error }) => (
-  <div className="premium-section logs-section">
+  <div className="premium-section logs-section full-width">
     <div className="section-header">
       <div className="icon-container">
         <FontAwesomeIcon icon={faBell} className="icon" />
@@ -478,27 +494,41 @@ const PantallaPuerta: React.FC = () => {
               </ul>
             </div>
 
-            <div className="widgets-grid">
-              <SystemStatusWidget
-                connectionStatus={systemState.connectionStatus}
-                doorStatus={systemState.doorStatus}
-              />
+            {/* Nuevo layout de widgets */}
+            <div className="main-content-row">
+              {/* Icono grande de la puerta */}
+              <div className="door-status-column">
+                <DoorStatusIcon doorStatus={systemState.doorStatus} />
+              </div>
 
-              <SecurityWidget
-                magneticSensor={systemState.magneticSensor}
-                pinStatus={systemState.pinStatus}
-                lastPinAttempt={systemState.lastPinAttempt}
-                showPin={showPin}
-                setShowPin={setShowPin}
-              />
+              {/* Widgets de información */}
+              <div className="status-widgets-column">
+                <div className="widgets-grid">
+                  <SystemStatusWidget
+                    connectionStatus={systemState.connectionStatus}
+                    doorStatus={systemState.doorStatus}
+                  />
 
-              <SensorsWidget
-                presenceStatus={systemState.presenceStatus}
-                pirCount={systemState.pirCount}
-                rfidStatus={systemState.rfidStatus}
-                lastRFID={systemState.lastRFID}
-              />
+                  <SecurityWidget
+                    magneticSensor={systemState.magneticSensor}
+                    pinStatus={systemState.pinStatus}
+                    lastPinAttempt={systemState.lastPinAttempt}
+                    showPin={showPin}
+                    setShowPin={setShowPin}
+                  />
 
+                  <SensorsWidget
+                    presenceStatus={systemState.presenceStatus}
+                    pirCount={systemState.pirCount}
+                    rfidStatus={systemState.rfidStatus}
+                    lastRFID={systemState.lastRFID}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Widget de eventos en una fila separada */}
+            <div className="event-log-row">
               <EventLogWidget registros={registros} loading={loadingRegistros} error={errorRegistros} />
             </div>
 
@@ -613,10 +643,84 @@ const PantallaPuerta: React.FC = () => {
           box-shadow: 0 0 10px rgba(92, 107, 192, 0.5);
         }
 
+        /* Nuevo layout */
+        .main-content-row {
+          display: flex;
+          gap: 2rem;
+          margin-bottom: 2rem;
+        }
+
+        .door-status-column {
+          flex: 1;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .door-status-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+          background: rgba(30, 30, 60, 0.6);
+          border-radius: 15px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          height: 100%;
+          width: 100%;
+          transition: all 0.3s ease;
+        }
+
+        .door-icon-wrapper {
+          background: rgba(92, 107, 192, 0.2);
+          border-radius: 50%;
+          width: 200px;
+          height: 200px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 1.5rem;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+          transition: all 0.3s ease;
+        }
+
+        .door-status-icon {
+          font-size: 120px;
+          transition: all 0.3s ease;
+        }
+
+        .door-status-icon.open {
+          color: #f59e0b;
+        }
+
+        .door-status-icon.closed {
+          color: #10b981;
+        }
+
+        .door-status-text {
+          font-size: 1.5rem;
+          font-weight: 700;
+          text-align: center;
+          margin-top: 1rem;
+        }
+
+        .status-widgets-column {
+          flex: 2;
+        }
+
         .widgets-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 2rem;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1.5rem;
+          height: 100%;
+        }
+
+        .event-log-row {
+          margin-top: 2rem;
+        }
+
+        .premium-section.full-width {
+          grid-column: 1 / -1;
         }
 
         .premium-section {
@@ -834,6 +938,9 @@ const PantallaPuerta: React.FC = () => {
         .logs-container {
           max-height: 300px;
           overflow-y: auto;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 1rem;
         }
 
         .log-item {
@@ -1035,6 +1142,25 @@ const PantallaPuerta: React.FC = () => {
           50% { transform: translateY(-5px); }
         }
 
+        @media (max-width: 1000px) {
+          .main-content-row {
+            flex-direction: column;
+          }
+          
+          .door-status-column, .status-widgets-column {
+            width: 100%;
+          }
+          
+          .door-icon-wrapper {
+            width: 150px;
+            height: 150px;
+          }
+          
+          .door-status-icon {
+            font-size: 80px;
+          }
+        }
+
         @media (max-width: 768px) {
           .premium-card {
             padding: 2rem;
@@ -1046,6 +1172,10 @@ const PantallaPuerta: React.FC = () => {
           
           .widgets-grid {
             grid-template-columns: 1fr;
+          }
+          
+          .door-status-icon {
+            font-size: 60px;
           }
         }
 
@@ -1060,6 +1190,11 @@ const PantallaPuerta: React.FC = () => {
           
           .premium-title {
             font-size: 1.5rem;
+          }
+          
+          .door-icon-wrapper {
+            width: 120px;
+            height: 120px;
           }
         }
       `}</style>
